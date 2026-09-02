@@ -1,0 +1,20 @@
+{
+  "name": "dsh-mini-utility-dock",
+  "version": "0.1.0",
+  "description": "Shared classic-script utility dock protocol for DSH plugins.",
+  "type": "module",
+  "bin": {
+    "dsh-mini-utility-dock": "bin/dsh-mini-utility-dock.js"
+  },
+  "files": ["bin", "dist", "README.md", "README.en.md", "LICENSE", "CHANGELOG.md", "CHANGELOG.en.md"],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xswt442-cmd/dsh-mini-utility-dock.git"
+  },
+  "keywords": ["dsh", "deepseek-harness", "dsh-plugin", "utility-dock"],
+  "license": "MIT"
+}

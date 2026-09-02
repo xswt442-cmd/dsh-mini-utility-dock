@@ -1,0 +1,13 @@
+node_modules/
+coverage/
+*.log
+*.tgz
+.npm/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.workbuddy/
+.claude/
+.codex/
+testplace/
