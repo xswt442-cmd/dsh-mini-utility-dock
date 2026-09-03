@@ -16,6 +16,7 @@
     "CHANGELOG.en.md"
   ],
   "scripts": {
+    "dock:embed": "node bin/dsh-mini-utility-dock.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {

@@ -14,8 +14,8 @@ Run `npx dsh-mini-utility-dock sync path/to/client.js` to embed the current frag
 You can also embed from this repo's own script (it never hard-codes a consumer path; the target is passed by the caller):
 
 ```sh
-npm run dock:embed --check path/to/client.js   # verify only, non-zero on drift
-npm run dock:embed path/to/client.js           # write between the markers
+npm run dock:embed -- check path/to/client.js  # verify only, non-zero on drift
+npm run dock:embed -- sync path/to/client.js   # write between the markers
 ```
 
 When registering, a missing, blank, or non-string `label` falls back to `id` as the accessible name, avoiding `aria-label="undefined"`.

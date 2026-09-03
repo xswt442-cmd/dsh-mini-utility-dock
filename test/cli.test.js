@@ -54,3 +54,38 @@ test('bootstrap remains a classic self-contained protocol v1 script', () => {
   assert.match(bootstrap, /createhelper\.dsh\.utility-dock/)
   assert.match(bootstrap, /DOCK_VERSION = 1/)
 })
+
+test('every dock:embed command documented in the READMEs actually runs', async () => {
+  // Smoke-guard against README drift: the fenced `npm run dock:embed ...`
+  // examples are extracted and executed, so a renamed script or a changed
+  // CLI surface breaks the suite before it breaks a user.
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+  const script = pkg.scripts && pkg.scripts['dock:embed']
+  assert.ok(script, 'package.json must define a dock:embed script')
+  assert.equal(script, 'node bin/dsh-mini-utility-dock.js')
+
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const file = join(dir, 'client.js')
+  await writeFile(file, '// <dsh-mini-utility-dock>\n// </dsh-mini-utility-dock>\n')
+  // Pre-sync so the documented `check` (listed first in the READMEs) passes.
+  assert.equal((await run('sync', file)).code, 0)
+  const sample = file.replace(/\\/g, '/')
+
+  for (const name of ['README.md', 'README.en.md']) {
+    const doc = await readFile(join(root, name), 'utf8')
+    const commands = [...doc.matchAll(/npm run dock:embed( -- (?:check|sync))? path\/to\/client\.js/g)]
+    assert.ok(commands.length, `${name} should document dock:embed usage`)
+    for (const [, args] of commands) {
+      const viaNpm = await new Promise((resolve) => {
+        // shell: true so `npm` resolves on Windows as well.
+        const child = spawn(`npm run dock:embed${args || ''} "${sample}"`,
+          { cwd: root, stdio: ['ignore', 'pipe', 'pipe'], shell: true })
+        let stdout = ''; let stderr = ''
+        child.stdout.on('data', (chunk) => { stdout += chunk })
+        child.stderr.on('data', (chunk) => { stderr += chunk })
+        child.on('close', (code) => resolve({ code, stdout, stderr }))
+      })
+      assert.equal(viaNpm.code, 0, `${name}: npm run dock:embed${args || ''} failed: ${viaNpm.stderr}`)
+    }
+  }
+})

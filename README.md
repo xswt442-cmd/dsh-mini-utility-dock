@@ -23,8 +23,8 @@ npx dsh-mini-utility-dock check path/to/client.js
 也可用本仓库脚本同步（不硬编码任何消费仓路径，目标由调用方传入）：
 
 ```sh
-npm run dock:embed --check path/to/client.js   # 仅校验，漂移时非零退出
-npm run dock:embed path/to/client.js           # 写入标记之间
+npm run dock:embed -- check path/to/client.js  # 仅校验，漂移时非零退出
+npm run dock:embed -- sync path/to/client.js   # 写入标记之间
 ```
 
 注册时若 `label` 缺省、空白或非字符串，会回退为 `id` 作为可访问名称，避免 `aria-label="undefined"`。
