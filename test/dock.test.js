@@ -130,6 +130,40 @@ test('register requires a non-empty id and onActivate', () => {
   assert.throws(() => api.register(null), TypeError)
 })
 
+test('a missing label falls back to the id as the accessible name', () => {
+  const env = makeEnv()
+  const api = loadDock(env).getUtilityDock()
+  api.register({ id: 'orphan', onActivate() { } })
+  const button = env.document.body.children[0].children[0]
+  assert.equal(button.getAttribute('aria-label'), 'orphan')
+  assert.equal(button.title, 'orphan')
+})
+
+test('a blank or whitespace-only label still falls back to the id', () => {
+  const env = makeEnv()
+  const api = loadDock(env).getUtilityDock()
+  api.register({ id: 'blank', label: '   ', onActivate() { } })
+  const button = env.document.body.children[0].children[0]
+  assert.equal(button.getAttribute('aria-label'), 'blank')
+})
+
+test('an explicit label is preserved on the button', () => {
+  const env = makeEnv()
+  const api = loadDock(env).getUtilityDock()
+  api.register({ id: 'named', label: 'Named Tool', onActivate() { } })
+  const button = env.document.body.children[0].children[0]
+  assert.equal(button.getAttribute('aria-label'), 'Named Tool')
+})
+
+test('update({ label }) keeps the accessible name valid', () => {
+  const env = makeEnv()
+  const api = loadDock(env).getUtilityDock()
+  const handle = api.register({ id: 'u', label: 'Named', onActivate() { } })
+  handle.update({ label: '' })
+  const button = env.document.body.children[0].children[0]
+  assert.equal(button.getAttribute('aria-label'), 'u', 'blank update is normalized to id')
+})
+
 test('items render as one ordered button each, labelled and pressed', () => {
   const env = makeEnv()
   const api = loadDock(env).getUtilityDock()

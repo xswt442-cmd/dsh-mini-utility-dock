@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 归一化 `register()` 的 `label`：缺省、空白或非字符串的 `label` 回退为 `id`，避免渲染出 `aria-label="undefined"`。
+
 ## 0.1.0
 
 - Add the Mini Utility Dock protocol v1 bootstrap.
