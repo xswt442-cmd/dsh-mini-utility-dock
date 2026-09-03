@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-09-04
 
 - Normalize `label` in `register()`: a missing, blank, or non-string label falls back to `id`, so no item renders `aria-label="undefined"`.
 
