@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 - 2026-09-06
 
 - Fix the README `npm run dock:embed` examples: add the previously missing `dock:embed` script to `package.json` and switch the usage to `npm run dock:embed -- check|sync path/to/client.js` (npm argument passing needs the `--` separator, and the CLI takes `sync|check` subcommands, not `--check`). A new smoke test extracts the documented commands from both READMEs and runs them, preventing docs/script drift.
 

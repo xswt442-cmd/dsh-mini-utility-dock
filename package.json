@@ -1,6 +1,6 @@
 {
   "name": "dsh-mini-utility-dock",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Shared classic-script utility dock protocol for DSH plugins.",
   "type": "module",
   "bin": {
