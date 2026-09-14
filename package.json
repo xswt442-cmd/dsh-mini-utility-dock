@@ -1,7 +1,7 @@
 {
   "name": "dsh-mini-utility-dock",
   "version": "0.1.2",
-  "description": "Canonical fragments and a build-time embedding CLI shared by DSH plugins: the Mini Utility Dock bootstrap and the loopback predicate helpers.",
+  "description": "Canonical fragments and a build-time embedding CLI shared by DSH plugins: the Mini Utility Dock bootstrap for client halves, and the host guard (loopback predicates plus the same-origin request guard) for host halves.",
   "type": "module",
   "bin": {
     "dsh-mini-utility-dock": "bin/dsh-mini-utility-dock.js"

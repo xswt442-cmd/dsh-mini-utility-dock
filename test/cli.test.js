@@ -9,7 +9,7 @@ import { spawn } from 'node:child_process'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const cli = join(root, 'bin', 'dsh-mini-utility-dock.js')
 const bootstrap = await readFile(join(root, 'dist', 'bootstrap.js'), 'utf8')
-const loopback = await readFile(join(root, 'dist', 'loopback.js'), 'utf8')
+const guard = await readFile(join(root, 'dist', 'guard.js'), 'utf8')
 
 function run(...args) {
   return new Promise((resolve) => {
@@ -62,13 +62,13 @@ test('bootstrap remains a classic self-contained protocol v1 script', () => {
 test('the fragment is chosen by the marker in the target file', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
   const file = join(dir, 'shared.js')
-  await writeFile(file, 'export const VERSION = 1\n// <dsh-loopback-helpers>\n// </dsh-loopback-helpers>\n')
+  await writeFile(file, 'export const VERSION = 1\n// <dsh-host-guard>\n// </dsh-host-guard>\n')
   const result = await run('sync', file)
   assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /dsh-loopback-helpers/, 'reports which fragment it embedded')
+  assert.match(result.stdout, /dsh-host-guard/, 'reports which fragment it embedded')
   const source = await readFile(file, 'utf8')
   assert.match(source, /export const LOOPBACK_HOSTNAMES/)
-  assert.match(source, /export const isLoopbackName/)
+  assert.match(source, /const bindGuard = /)
   assert.doesNotMatch(source, /DOCK_KEY/, 'must not embed the dock fragment')
   assert.equal((await run('check', file)).code, 0)
   assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
@@ -80,14 +80,18 @@ test('the fragment is chosen by the marker in the target file', async () => {
   assert.match(unknownResult.stderr, /no fragment marker found/)
 })
 
-test('the loopback fragment stays dependency-free ESM', () => {
+test('the guard fragment stays dependency-free ESM', () => {
   // It is embedded into a host half, not a browser bundle, so ESM is expected —
   // but it must not reach for anything the consumer has to install.
-  assert.doesNotMatch(loopback, /\brequire\s*\(/)
-  assert.doesNotMatch(loopback, /^\s*import\s/m)
-  for (const name of ['LOOPBACK_HOSTNAMES', 'normalizeHostValue', 'hostHostname', 'isLoopbackName', 'isLoopbackAddress']) {
-    assert.match(loopback, new RegExp(`export const ${name}\\b`), `fragment must export ${name}`)
+  assert.doesNotMatch(guard, /\brequire\s*\(/)
+  assert.doesNotMatch(guard, /^\s*import\s/m)
+  for (const name of ['LOOPBACK_HOSTNAMES', 'normalizeHostValue', 'hostHostname', 'portOf', 'isLoopbackName', 'isLoopbackAddress', 'GUARD_REASONS', 'DEFAULT_GUARD_POLICY']) {
+    assert.match(guard, new RegExp(`export const ${name}\\b`), `fragment must export ${name}`)
   }
+  // The factory is deliberately NOT exported: a consumer that both embeds the
+  // block and re-exports the same name would otherwise collide with it.
+  assert.doesNotMatch(guard, /^export const createGuard\b/m, 'the factory stays module-private')
+  assert.match(guard, /^const bindGuard = /m)
 })
 
 test('every dock:embed command documented in the READMEs actually runs', async () => {

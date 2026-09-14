@@ -9,12 +9,13 @@
 //   dsh-mini-utility-dock  -> <dsh-mini-utility-dock> ... </dsh-mini-utility-dock>
 //     the Mini Utility Dock bootstrap, embedded into a plugin's lib/client.js
 //
-//   dsh-loopback-helpers   -> <dsh-loopback-helpers> ... </dsh-loopback-helpers>
-//     the shared loopback predicates, embedded into a plugin's lib/shared.js
+//   dsh-host-guard         -> <dsh-host-guard> ... </dsh-host-guard>
+//     the loopback predicates and the same-origin request guard, embedded into a
+//     plugin's lib/shared.js
 //
 // The fragment is selected by the marker already present in the target file, so
 // one command serves either target. A consumer calls this through its own
-// `dock:sync` / `loopback:sync` script; the paired `check` mode is what CI runs.
+// `dock:sync` / `guard:sync` script; the paired `check` mode is what CI runs.
 
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -22,7 +23,7 @@ import { fileURLToPath } from 'node:url'
 
 const FRAGMENTS = [
   { name: 'dsh-mini-utility-dock', source: 'bootstrap.js' },
-  { name: 'dsh-loopback-helpers', source: 'loopback.js' }
+  { name: 'dsh-host-guard', source: 'guard.js' }
 ]
 
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
