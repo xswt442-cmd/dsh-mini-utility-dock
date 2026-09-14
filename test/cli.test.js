@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const cli = join(root, 'bin', 'dsh-mini-utility-dock.js')
 const bootstrap = await readFile(join(root, 'dist', 'bootstrap.js'), 'utf8')
+const loopback = await readFile(join(root, 'dist', 'loopback.js'), 'utf8')
 
 function run(...args) {
   return new Promise((resolve) => {
@@ -53,6 +54,40 @@ test('bootstrap remains a classic self-contained protocol v1 script', () => {
   assert.doesNotMatch(bootstrap, /\brequire\s*\(/)
   assert.match(bootstrap, /createhelper\.dsh\.utility-dock/)
   assert.match(bootstrap, /DOCK_VERSION = 1/)
+})
+
+// The CLI serves two fragments and picks between them by the marker present in
+// the target file, so both directions need covering: the right source is chosen,
+// and the wrong marker is refused rather than silently matching.
+test('the fragment is chosen by the marker in the target file', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const file = join(dir, 'shared.js')
+  await writeFile(file, 'export const VERSION = 1\n// <dsh-loopback-helpers>\n// </dsh-loopback-helpers>\n')
+  const result = await run('sync', file)
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /dsh-loopback-helpers/, 'reports which fragment it embedded')
+  const source = await readFile(file, 'utf8')
+  assert.match(source, /export const LOOPBACK_HOSTNAMES/)
+  assert.match(source, /export const isLoopbackName/)
+  assert.doesNotMatch(source, /DOCK_KEY/, 'must not embed the dock fragment')
+  assert.equal((await run('check', file)).code, 0)
+  assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
+
+  const unknown = join(dir, 'other.js')
+  await writeFile(unknown, '// <some-other-fragment>\n// </some-other-fragment>\n')
+  const unknownResult = await run('sync', unknown)
+  assert.equal(unknownResult.code, 1)
+  assert.match(unknownResult.stderr, /no fragment marker found/)
+})
+
+test('the loopback fragment stays dependency-free ESM', () => {
+  // It is embedded into a host half, not a browser bundle, so ESM is expected —
+  // but it must not reach for anything the consumer has to install.
+  assert.doesNotMatch(loopback, /\brequire\s*\(/)
+  assert.doesNotMatch(loopback, /^\s*import\s/m)
+  for (const name of ['LOOPBACK_HOSTNAMES', 'normalizeHostValue', 'hostHostname', 'isLoopbackName', 'isLoopbackAddress']) {
+    assert.match(loopback, new RegExp(`export const ${name}\\b`), `fragment must export ${name}`)
+  }
 })
 
 test('every dock:embed command documented in the READMEs actually runs', async () => {

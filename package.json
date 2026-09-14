@@ -1,7 +1,7 @@
 {
   "name": "dsh-mini-utility-dock",
   "version": "0.1.2",
-  "description": "Shared classic-script utility dock protocol for DSH plugins.",
+  "description": "Canonical fragments and a build-time embedding CLI shared by DSH plugins: the Mini Utility Dock bootstrap and the loopback predicate helpers.",
   "type": "module",
   "bin": {
     "dsh-mini-utility-dock": "bin/dsh-mini-utility-dock.js"
