@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const cli = join(root, 'bin', 'dsh-mini-utility-dock.js')
 const bootstrap = await readFile(join(root, 'dist', 'bootstrap.js'), 'utf8')
+const loopback = await readFile(join(root, 'dist', 'loopback.js'), 'utf8')
 const guard = await readFile(join(root, 'dist', 'guard.js'), 'utf8')
 
 function run(...args) {
@@ -56,22 +57,46 @@ test('bootstrap remains a classic self-contained protocol v1 script', () => {
   assert.match(bootstrap, /DOCK_VERSION = 1/)
 })
 
-// The CLI serves two fragments and picks between them by the marker present in
-// the target file, so both directions need covering: the right source is chosen,
-// and the wrong marker is refused rather than silently matching.
-test('the fragment is chosen by the marker in the target file', async () => {
+// A host half embeds BOTH shared.js fragments, so the CLI maintains every marked
+// block it finds in one pass, in dependency order. Both directions need covering:
+// the right source reaches each block, and an unknown marker is refused.
+test('every marked block in the target file is maintained', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
   const file = join(dir, 'shared.js')
-  await writeFile(file, 'export const VERSION = 1\n// <dsh-host-guard>\n// </dsh-host-guard>\n')
+  await writeFile(file, [
+    'export const VERSION = 1',
+    '// <dsh-loopback-helpers>',
+    '// </dsh-loopback-helpers>',
+    '',
+    '// <dsh-host-guard>',
+    '// </dsh-host-guard>',
+    ''
+  ].join('\n'))
   const result = await run('sync', file)
   assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /dsh-host-guard/, 'reports which fragment it embedded')
+  assert.match(result.stdout, /dsh-loopback-helpers, dsh-host-guard/, 'reports both fragments')
   const source = await readFile(file, 'utf8')
+
+  // The predicates come from the loopback block, the factory from the guard block,
+  // and the guard block must NOT re-declare or import what the block above it
+  // already published — that would be a redeclaration error in the consumer file.
   assert.match(source, /export const LOOPBACK_HOSTNAMES/)
-  assert.match(source, /const bindGuard = /)
+  assert.match(source, /export const isLoopbackAddress/)
+  assert.match(source, /^const bindGuard = /m)
+  assert.doesNotMatch(source, /^\s*import\s/m, 'fragments must not import; they share one consumer file')
+  const declarations = (source.match(/const isLoopbackName = |export const isLoopbackName = /g) || []).length
+  assert.equal(declarations, 1, 'isLoopbackName must be declared exactly once')
+
   assert.doesNotMatch(source, /DOCK_KEY/, 'must not embed the dock fragment')
   assert.equal((await run('check', file)).code, 0)
   assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
+
+  // Order matters: the guard reads predicates the loopback block declares, so a
+  // guard block placed above it would be a real defect, not a style choice.
+  assert.ok(
+    source.indexOf('// <dsh-loopback-helpers>') < source.indexOf('// <dsh-host-guard>'),
+    'the loopback block must precede the guard block'
+  )
 
   const unknown = join(dir, 'other.js')
   await writeFile(unknown, '// <some-other-fragment>\n// </some-other-fragment>\n')
@@ -80,16 +105,28 @@ test('the fragment is chosen by the marker in the target file', async () => {
   assert.match(unknownResult.stderr, /no fragment marker found/)
 })
 
-test('the guard fragment stays dependency-free ESM', () => {
-  // It is embedded into a host half, not a browser bundle, so ESM is expected —
-  // but it must not reach for anything the consumer has to install.
-  assert.doesNotMatch(guard, /\brequire\s*\(/)
-  assert.doesNotMatch(guard, /^\s*import\s/m)
-  for (const name of ['LOOPBACK_HOSTNAMES', 'normalizeHostValue', 'hostHostname', 'portOf', 'isLoopbackName', 'isLoopbackAddress', 'GUARD_REASONS', 'DEFAULT_GUARD_POLICY']) {
-    assert.match(guard, new RegExp(`export const ${name}\\b`), `fragment must export ${name}`)
+test('neither fragment reaches for anything the consumer must install', () => {
+  // Both are embedded into a host half, not a browser bundle, so ESM is expected
+  // — but neither may import, because they share one consumer file and would
+  // collide with what the other block declares.
+  for (const [name, text] of [['loopback', loopback], ['guard', guard]]) {
+    assert.doesNotMatch(text, /\brequire\s*\(/, `${name} must not require()`)
+    assert.doesNotMatch(text, /^\s*import\s/m, `${name} must not import`)
+  }
+  for (const exported of ['LOOPBACK_HOSTNAMES', 'normalizeHostValue', 'hostHostname', 'isLoopbackName', 'isLoopbackAddress']) {
+    assert.match(loopback, new RegExp(`export const ${exported}\\b`), `loopback must export ${exported}`)
+  }
+  // The guard owns policy only: it uses the predicates above instead of restating
+  // them, so it must not re-export or re-declare any of them.
+  for (const owned of ['LOOPBACK_HOSTNAMES', 'isLoopbackName', 'isLoopbackAddress', 'hostHostname']) {
+    assert.doesNotMatch(guard, new RegExp(`(?:const|function|let)\\s+${owned}\\b`), `guard must not redeclare ${owned}`)
+    assert.doesNotMatch(guard, new RegExp(`export const ${owned}\\b`), `guard must not re-export ${owned}`)
+  }
+  for (const exported of ['portOf', 'GUARD_REASONS', 'DEFAULT_GUARD_POLICY']) {
+    assert.match(guard, new RegExp(`export const ${exported}\\b`), `guard must export ${exported}`)
   }
   // The factory is deliberately NOT exported: a consumer that both embeds the
-  // block and re-exports the same name would otherwise collide with it.
+  // block and declares the same name would otherwise collide with it.
   assert.doesNotMatch(guard, /^export const createGuard\b/m, 'the factory stays module-private')
   assert.match(guard, /^const bindGuard = /m)
 })
