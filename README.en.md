@@ -38,9 +38,20 @@ Consumers invoke the same CLI as `loopback:sync` / `guard:sync`, with the target
 
 The two fragments in `lib/shared.js` have a fixed order, `dsh-loopback-helpers` first.
 
-The order is a functional requirement, not a style choice. Both fragments occupy one file, and `dsh-host-guard` uses the module-scope names the preceding fragment exports. It therefore neither redeclares those predicates nor imports a sibling module: redeclaring collides with the declaration in the same file, and importing would break the standalone-publication constraint. The `guard-parity` check fails when the order is reversed.
+The order is a functional requirement, not a style choice. Both fragments occupy one file, and `dsh-host-guard` uses the module-scope names the preceding fragment exports. It therefore neither redeclares those predicates nor imports a sibling module: redeclaring collides with the declaration in the same file, and importing would break the standalone-publication constraint. `guard-parity` and every consumer's `check` fail when the order is reversed.
 
 `bindGuard` is not exported from the fragment. A consumer declares its own guard export in the same file (typically reusing an existing name such as `createGuard`), and exporting the same identifier would collide. Each plugin calls `bindGuard()` and passes its own error codes and wording through `policy`: the enforcement is shared, the error vocabulary stays with each plugin.
+
+## Cross-repo consistency
+
+The three hand-maintained copies drifted three times: all three rejected IPv6 loopback; the three disagreed on which Host spellings count as loopback; and an unbracketed IPv6 Host silently skipped the allowlist in one plugin while the others denied it. Two checks of different kinds now cover this.
+
+- **Local.** Each consumer's `npm test` runs `loopback:check` / `guard:check`, comparing its two blocks byte for byte against the `dist/` of **the dock version it pins**. This covers a hand edit to a block and a missing re-`sync`.
+- **Cross-repo.** A published dock version is immutable, and consumers pin an exact version, so "all three pin one version" is equivalent to "all three hold byte-identical blocks". The cross-repo property follows from pin agreement, without comparing three source trees. The one real risk is omitting a peer from a synchronized bump.
+
+A consumer's `scripts/guard-parity.mjs` checks that cross-repo property directly, including pin agreement, and asserts that all three reach the same answer for every decision.
+
+It is a **manual diagnostic, not a CI gate**: the property it asserts cannot hold while peers sit on a different branch — on a `dev` push the peer checkouts resolve to their default branch. Run it when all three checkouts share a branch (before or after a release), where a failure is a real signal.
 
 ## Development
 
