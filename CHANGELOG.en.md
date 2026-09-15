@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 - 2026-09-16
+
+- Add a cross-repo consistency section to the READMEs, separating two different properties: **local** -- a consumer's `npm test` runs `loopback:check` / `guard:check` to compare both fragments byte-for-byte against the version of this package it pins, covering both "edited a block by hand" and "forgot to re-`sync`"; and **cross-repo** -- this package's published versions are immutable and consumers pin an exact version, so "all three pin the same version" already implies "all three hold byte-identical blocks".
+- That section also records that a consumer's `scripts/guard-parity.mjs` is a **manual diagnostic, not a CI gate**, because the property it asserts cannot hold while a peer checkout resolves to a different branch, which would make it report false failures.
+- The LICENSE copyright holder is now `xswt442-cmd`.
+
 ## 0.1.3 - 2026-09-14
 
 - Add two host-side fragments. `dist/loopback.js` (`dsh-loopback-helpers`) exports `LOOPBACK_HOSTNAMES`, `normalizeHostValue`, `hostHostname`, `isLoopbackName` and `isLoopbackAddress`. `dist/guard.js` (`dsh-host-guard`) exports `portOf`, `GUARD_REASONS`, `DEFAULT_GUARD_POLICY` and an internal `bindGuard()` factory; a consumer passes its own error codes and wording as `policy`, so the enforcement does not fork per plugin.
