@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 - 2026-09-17
+
+- Documentation maintenance: README and CHANGELOG cleanup. Fragments and command behavior are unchanged, so consumer pins need no update.
+
 ## 0.1.4 - 2026-09-16
 
 - Add a cross-repo consistency section to the READMEs, separating two different properties: **local** -- a consumer's `npm test` runs `loopback:check` / `guard:check` to compare both fragments byte-for-byte against the version of this package it pins, covering both "edited a block by hand" and "forgot to re-`sync`"; and **cross-repo** -- this package's published versions are immutable and consumers pin an exact version, so "all three pin the same version" already implies "all three hold byte-identical blocks".
