@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7 - 2026-09-20
+
+- The two host-side fragments no longer state how many consumers exist: "all three plugins", "the three disagree" and "the three plugins / diverged three times" give way to wording that names no count. A fragment is embedded verbatim into each consumer, where the reader cannot know how many sibling repositories exist — the count is workspace knowledge, not that repository's.
+- The fragments' bytes change, so consumers must re-run `loopback:sync` / `guard:sync` and raise their pin to 0.1.7.
+
 ## 0.1.6 - 2026-09-20
 
 - Fix the `allowRemoteHost` note in `dist/guard.js`: it read "stop being admitted", the opposite of what the code does — that mode skips both checks, so it admits them. The JSDoc was already right; only this inline comment was inverted.

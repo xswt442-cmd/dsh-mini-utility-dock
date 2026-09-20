@@ -21,8 +21,8 @@
 // file, so an import of a sibling module would both break the standalone promise
 // and collide with the exports the block above already declares.
 //
-// Why the guard is shared rather than reimplemented per plugin: the three plugins
-// each carried their own `createGuard`, and the copies diverged three times. The
+// Why the guard is shared rather than reimplemented per plugin: each consumer
+// carried its own `createGuard`, and the copies diverged repeatedly. The
 // parts that differed were never the *decisions* — they were the error codes and
 // message strings welded into the same function, which forced every repo to keep
 // its own copy and made drift possible. Here the enforcement order and every

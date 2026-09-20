@@ -10,8 +10,8 @@
 // the dock is that a plugin works with no sibling installed.
 //
 // Why it is shared at all: these predicates were copy-pasted per repo and
-// drifted twice. The first drift rejected IPv6 loopback in all three plugins;
-// the second made the three disagree on which Host spellings count as loopback
+// drifted twice. The first drift rejected IPv6 loopback everywhere; the second
+// is that consumers disagreed on which Host spellings count as loopback
 // (see scripts/guard-parity.mjs, which compares this block across repos).
 //
 // "Loopback" is decided in exactly one place — LOOPBACK_HOSTNAMES plus the
