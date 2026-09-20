@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6 - 2026-09-20
+
+- Fix the `allowRemoteHost` note in `dist/guard.js`: it read "stop being admitted", the opposite of what the code does — that mode skips both checks, so it admits them. The JSDoc was already right; only this inline comment was inverted.
+- The fragment's bytes change, so consumers must re-run `guard:sync` and raise their pin to 0.1.6.
+
 ## 0.1.5 - 2026-09-17
 
 - Documentation maintenance: README and CHANGELOG cleanup. Fragments and command behavior are unchanged, so consumer pins need no update.
