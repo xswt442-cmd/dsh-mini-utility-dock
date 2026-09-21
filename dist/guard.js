@@ -7,7 +7,7 @@
 //   npm run guard:check   (fail on drift)
 // instead of being imported: a bare `import 'dsh-mini-utility-dock/...'` would
 // put a runtime dependency on the dock into every plugin, and the whole point of
-// the dock is that a plugin works with no sibling installed.
+// the dock is that a plugin ships standalone, with nothing else required.
 //
 // This file is the POLICY half. What counts as loopback is a separate fragment
 // (`dist/loopback.js`, embedded under the `dsh-loopback-helpers` marker), and
@@ -18,7 +18,7 @@
 // needs `loopback:sync` to have produced a `lib/shared.js` that declares them.
 //
 // There is deliberately no `import` here. A consumer embeds both blocks into one
-// file, so an import of a sibling module would both break the standalone promise
+// file, so an import of another module would both break the standalone promise
 // and collide with the exports the block above already declares.
 //
 // Why the guard is shared rather than reimplemented per plugin: each consumer

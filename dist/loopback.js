@@ -7,7 +7,7 @@
 //   npm run loopback:check   (fail on drift)
 // instead of being imported: a bare `import 'dsh-mini-utility-dock/...'` would
 // put a runtime dependency on the dock into every plugin, and the whole point of
-// the dock is that a plugin works with no sibling installed.
+// the dock is that a plugin ships standalone, with nothing else required.
 //
 // Why it is shared at all: these predicates were copy-pasted per repo and
 // drifted twice. The first drift rejected IPv6 loopback everywhere; the second
