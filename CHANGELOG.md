@@ -3,6 +3,11 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## 0.1.8 - 2026-09-21
+
+- 两个 host 侧片段的注释不再出现 `sibling`：三处改为陈述设计目标本身——插件独立运行，不依赖同级安装。片段会逐字嵌入消费仓，那个词在那里没有可指对象。
+- 片段字节因此变化，消费仓需重新运行 `loopback:sync` / `guard:sync` 并把 pin 升到 0.1.8。
+
 ## 0.1.7 - 2026-09-20
 
 - 两个 host 侧片段的注释不再带消费仓数量：「all three plugins」「the three disagree」「the three plugins / diverged three times」改为不指名、不计数的说法。片段会逐字嵌入消费仓，那里的读者无从得知存在几个消费方，计数是工作区知识而非该仓知识。
