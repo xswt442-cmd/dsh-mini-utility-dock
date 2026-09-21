@@ -2,7 +2,14 @@
 
 [中文](./README.md) | [English](./README.en.md)
 
-DSH 插件共享的源码片段与嵌入 CLI。
+[![ci](https://github.com/xswt442-cmd/dsh-mini-utility-dock/actions/workflows/ci.yml/badge.svg)](https://github.com/xswt442-cmd/dsh-mini-utility-dock/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/dsh-mini-utility-dock?label=npm&color=4d6bfe)](https://www.npmjs.com/package/dsh-mini-utility-dock)
+[![release](https://img.shields.io/github/v/release/xswt442-cmd/dsh-mini-utility-dock?label=release&color=16a3a3)](https://github.com/xswt442-cmd/dsh-mini-utility-dock/releases)
+[![node](https://img.shields.io/static/v1?label=node&message=%3E%3D20&color=339933&logo=node.js&logoColor=white)](https://nodejs.org)
+[![downloads](https://img.shields.io/npm/d18m/dsh-mini-utility-dock?label=downloads&logo=npm&color=cb3837)](https://www.npmjs.com/package/dsh-mini-utility-dock)
+[![license](https://img.shields.io/badge/license-MIT-22c55e.svg)](./LICENSE)
+
+DSH 插件族的共享资产：源码片段、嵌入 CLI，以及围绕它们的跨仓诊断与双语文档校验工具。
 
 ## 片段
 
@@ -44,4 +51,6 @@ npm run dock:embed -- sync path/to/client.js
 
 消费仓的 `npm test` 用 `loopback:check` / `guard:check` 把本仓两个片段与所 pin 的 dock 版本逐字节比对。dock 版本不可变且消费仓 pin 精确版本，故「pin 一致」即「片段一致」。
 
-`scripts/guard-parity.mjs`（位于各消费仓）直接检这条跨仓性质，含 pin 一致性断言。它是人工诊断工具，**不在 CI 中运行**：peer 处于不同分支时该性质本就不成立。请在三个检出同分支时运行。
+`dsh-plugin-parity`（本包提供的 bin）直接检这条跨仓性质，含 pin 一致性断言与行为级对比。它是人工诊断工具，**不在 CI 中运行**：peer 处于不同分支时该性质本就不成立。成员表由调用方经 `--member <repo>:<export>` 提供——守卫工厂的导出名按片段设计是各仓自定的，故本工具不预设任何成员；不带 `--member` 时只跑静态检查，自动发现所有嵌入了宿主守卫块的仓。
+
+`dsh-plugin-docs`（同样是本包的 bin）校验双语文档的结构对齐：README 中英标题层级与代码围栏一致，CHANGELOG 中英版本段、分类段与条目数一致（分类标题经双语映射归一）；`--base <revision>` 额外要求双语对同改，单边改动即缺翻译。接入方式是各仓自己的 `docs:check` script 指向它——本包自身的双语文档也由此校验。

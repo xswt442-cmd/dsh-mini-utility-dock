@@ -3,6 +3,11 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## 0.3.0 - 2026-09-22
+
+- 新增 `dsh-plugin-docs`：双语文档结构校验，收编自插件仓里各自维护的 `check-docs.mjs`。接口不变：无参数查 README 与 CHANGELOG 的中英结构对齐，`--base <revision>` 检查双语对同改。本包自身的双语文档也由此接入校验。
+- README 补上 badges 与包定位说明；两个诊断 bin（`dsh-plugin-parity`、`dsh-plugin-docs`）的用途与接入方式补进文档；包描述同步「族级共享资产」的定位。
+
 ## 0.2.0 - 2026-09-21
 
 - 新增 `dsh-plugin-parity`：跨仓漂移诊断，收编自插件仓里各自维护的那份脚本。成员表由调用方通过 `--member <repo>:<export>` 提供，本包不点名任何仓；不带 `--member` 时只跑静态检查，自动发现所有嵌入了宿主守卫块的仓。

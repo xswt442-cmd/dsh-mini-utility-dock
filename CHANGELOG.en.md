@@ -3,6 +3,11 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.3.0 - 2026-09-22
+
+- New `dsh-plugin-docs`: a bilingual docs structure check, adopted from the `check-docs.mjs` copy each plugin repository carried. Same interface: no arguments checks the README and CHANGELOG pairs for structural alignment, `--base <revision>` requires bilingual pairs to change together. This package's own bilingual docs are now checked by it too.
+- README gains badges and a positioning statement; the two diagnostic bins (`dsh-plugin-parity`, `dsh-plugin-docs`) are documented with their purpose and opt-in mechanism; the package description states the "family shared assets" scope.
+
 ## 0.2.0 - 2026-09-21
 
 - New `dsh-plugin-parity`: a cross-repository drift check, adopted from the copy each plugin repository carried. The member list is caller-supplied via `--member <repo>:<export>`; this package names no repository of its own. Without `--member` it runs the static checks only and discovers every repository that embeds the host-guard block.
