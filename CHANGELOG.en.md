@@ -3,6 +3,11 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.2.0 - 2026-09-21
+
+- New `dsh-plugin-parity`: a cross-repository drift check, adopted from the copy each plugin repository carried. The member list is caller-supplied via `--member <repo>:<export>`; this package names no repository of its own. Without `--member` it runs the static checks only and discovers every repository that embeds the host-guard block.
+- The copy in each plugin repository is gone with it; the bilingual-structure half of `docs:check` stays with the repositories.
+
 ## 0.1.8 - 2026-09-21
 
 - The two host-side fragments no longer say "sibling": the three phrasings now state the design goal itself — a plugin ships standalone, with nothing else required. A fragment is embedded verbatim into each consumer, where the word had no referent.
