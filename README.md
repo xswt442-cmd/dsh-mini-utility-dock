@@ -1,5 +1,7 @@
 # dsh-mini-utility-dock
 
+[中文](./README.md) | [English](./README.en.md)
+
 DSH 插件共享的源码片段与嵌入 CLI。
 
 ## 片段

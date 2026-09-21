@@ -1,5 +1,7 @@
 # dsh-mini-utility-dock
 
+[中文](./README.md) | [English](./README.en.md)
+
 Source fragments and an embedding CLI shared by the DSH plugins.
 
 ## Fragments

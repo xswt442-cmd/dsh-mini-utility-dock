@@ -1,8 +1,11 @@
-# Changelog
+# 更新日志
+
+Release Notes 由对应版本段生成；最新版本在前。
+英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
 ## 0.1.7 - 2026-09-20
 
-- 两个 host 侧片段的注释不再带消费仓数量：「all three plugins」「the three disagree」「the three plugins / diverged three times」改为不指名、不计数的说法。片段会逐字嵌入消费仓，那里的读者无从得知有几个同级仓，计数是工作区知识而非该仓知识。
+- 两个 host 侧片段的注释不再带消费仓数量：「all three plugins」「the three disagree」「the three plugins / diverged three times」改为不指名、不计数的说法。片段会逐字嵌入消费仓，那里的读者无从得知存在几个消费方，计数是工作区知识而非该仓知识。
 - 片段字节因此变化，消费仓需重新运行 `loopback:sync` / `guard:sync` 并把 pin 升到 0.1.7。
 
 ## 0.1.6 - 2026-09-20
