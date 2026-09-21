@@ -1,11 +1,12 @@
 {
   "name": "dsh-mini-utility-dock",
-  "version": "0.2.0",
-  "description": "Canonical fragments and a build-time embedding CLI shared by DSH plugins: the Mini Utility Dock bootstrap for client halves, and the loopback predicates plus the host request guard for host halves.",
+  "version": "0.3.0",
+  "description": "The DSH plugin family's shared assets: source fragments (the Mini Utility Dock bootstrap for client halves, the loopback predicates and host request guard for host halves), the embedding CLI, and the family diagnostics — cross-repo drift check and bilingual docs structure check.",
   "type": "module",
   "bin": {
     "dsh-mini-utility-dock": "bin/dsh-mini-utility-dock.js",
-    "dsh-plugin-parity": "bin/dsh-plugin-parity.js"
+    "dsh-plugin-parity": "bin/dsh-plugin-parity.js",
+    "dsh-plugin-docs": "bin/dsh-plugin-docs.js"
   },
   "files": [
     "bin",
@@ -18,6 +19,7 @@
   ],
   "scripts": {
     "dock:embed": "node bin/dsh-mini-utility-dock.js",
+    "docs:check": "node bin/dsh-plugin-docs.js",
     "test": "node --test test/*.test.js"
   },
   "engines": {
