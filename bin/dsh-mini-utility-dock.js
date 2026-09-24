@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Embed a canonical fragment from this package into a consumer file.
 //
-// Two fragments are maintained the same way, because both have the same shape
-// of problem: the consumer must ship the code standalone (a browser classic
+// Three fragments are maintained the same way, because all three have the same
+// shape of problem: the consumer must ship the code standalone (a browser classic
 // script cannot `import`, and a host half must not depend on the dock being
 // installed), so the code is embedded at build time and drift is a build error.
 //
-//   dsh-mini-utility-dock  -> <dsh-mini-utility-dock> ... </dsh-mini-utility-dock>
-//     the Mini Utility Dock bootstrap, embedded into a plugin's lib/client.js
+//   dsh-utility-launcher   -> <dsh-utility-launcher> ... </dsh-utility-launcher>
+//     the family launcher (one icon plus the menu of family panels it opens),
+//     embedded into a plugin's lib/client.js
 //
 //   dsh-loopback-helpers   -> <dsh-loopback-helpers> ... </dsh-loopback-helpers>
 //     the loopback predicates, embedded into a plugin's lib/shared.js
@@ -21,8 +22,9 @@
 // embed just those.
 //
 // The fragment is selected by the marker already present in the target file, so
-// one command serves either target. A consumer calls this through its own
-// `dock:sync` / `guard:sync` script; the paired `check` mode is what CI runs.
+// one command serves every target and only a named block is ever touched. A
+// consumer calls this through its own `launcher:sync` / `guard:sync` /
+// `loopback:sync` script; the paired `check` mode is what CI runs.
 
 import { readFile, writeFile, stat } from 'node:fs/promises'
 import { resolve } from 'node:path'
