@@ -3,6 +3,10 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## 0.5.1 - 2026-09-25
+
+- 修复 launcher 热重载后消失：归属从一次性闩锁改为可释放的认领，owner 被销毁时唤醒其余副本重新注册，不再需要刷新整页。
+
 ## 0.5.0 - 2026-09-24
 
 - 新增 `dist/launcher.js`（片段标记 `dsh-utility-launcher`）：族的共享入口——左下角一个图标，点开一个列出各插件面板的菜单。它走槽位而不是页面级协议：每页只有一份装配（先加载的插件赢得 `window` 互斥并声明菜单座位 `createhelper.utility.item`），其余插件各往那个座位投一行。消费插件用 `launcher:sync` / `launcher:check` 维护，三个 client 半从此不再各写一份。

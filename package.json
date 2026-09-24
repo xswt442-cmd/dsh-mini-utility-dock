@@ -1,6 +1,6 @@
 {
   "name": "dsh-mini-utility-dock",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "The DSH plugin family's shared assets: source fragments (the loopback predicates and host request guard for host halves, the utility launcher for client halves), the embedding CLI, and the family diagnostics — cross-repo drift check and bilingual docs structure check.",
   "type": "module",
   "bin": {

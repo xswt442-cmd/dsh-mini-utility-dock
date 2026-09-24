@@ -3,6 +3,10 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.5.1 - 2026-09-25
+
+- Fix the launcher disappearing after a hot reload: the claim is released with its owner, which wakes the other copies to register again instead of requiring a full page reload.
+
 ## 0.5.0 - 2026-09-24
 
 - New `dist/launcher.js` (marker `dsh-utility-launcher`): the family's shared entry point — one icon at the bottom-left that opens a menu of the family's panels. It goes through slots rather than a page-local protocol: one copy of the assembly runs per page (the first plugin to load wins the `window` mutex and declares the menu seat `createhelper.utility.item`), and every other plugin contributes one row to that seat. Consumers maintain it with `launcher:sync` / `launcher:check`, so the three client halves no longer each carry their own copy.
