@@ -3,6 +3,15 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## 0.5.0 - 2026-09-24
+
+- 新增 `dist/launcher.js`（片段标记 `dsh-utility-launcher`）：族的共享入口——左下角一个图标，点开一个列出各插件面板的菜单。它走槽位而不是页面级协议：每页只有一份装配（先加载的插件赢得 `window` 互斥并声明菜单座位 `createhelper.utility.item`），其余插件各往那个座位投一行。消费插件用 `launcher:sync` / `launcher:check` 维护，三个 client 半从此不再各写一份。
+
+## 0.4.0 - 2026-09-24
+
+- 移除 `dist/bootstrap.js`（dock 引导片段）与对应的 `FRAGMENTS` 条目。它让每个消费插件在 `document.body` 上挂一个 `position:fixed; z-index:9997` 的容器，位置靠自己量侧边栏算出来——于是它必然悬在页面上方，会压住 composer 自己的控件。三个消费插件已改为注册宿主槽位 `sidebar.footer.action`（图标按钮，就在设置上方），`lib/client.js` 不再嵌任何片段，各仓的 `dock:sync` / `dock:check` 随之删除。
+- 消费仓仍 pin `0.3.0`：本仓剩下两个片段（loopback 判定、host 守卫）未变，`loopback:check` / `guard:check` 继续按该版本逐字节比对。
+
 ## 0.3.0 - 2026-09-22
 
 - 新增 `dsh-plugin-docs`：双语文档结构校验，收编自插件仓里各自维护的 `check-docs.mjs`。接口不变：无参数查 README 与 CHANGELOG 的中英结构对齐，`--base <revision>` 检查双语对同改。本包自身的双语文档也由此接入校验。

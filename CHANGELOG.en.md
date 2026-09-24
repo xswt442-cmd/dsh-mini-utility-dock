@@ -3,6 +3,15 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.5.0 - 2026-09-24
+
+- New `dist/launcher.js` (marker `dsh-utility-launcher`): the family's shared entry point — one icon at the bottom-left that opens a menu of the family's panels. It goes through slots rather than a page-local protocol: one copy of the assembly runs per page (the first plugin to load wins the `window` mutex and declares the menu seat `createhelper.utility.item`), and every other plugin contributes one row to that seat. Consumers maintain it with `launcher:sync` / `launcher:check`, so the three client halves no longer each carry their own copy.
+
+## 0.4.0 - 2026-09-24
+
+- Remove `dist/bootstrap.js` (the dock bootstrap fragment) and its `FRAGMENTS` row. It made every consumer append a `position:fixed; z-index:9997` container to `document.body` and locate it by measuring the sidebar — so it necessarily floated above the page and covered the composer's own controls. The three consumers now register the host's `sidebar.footer.action` seat instead (an icon button directly above Settings), embed no fragment in `lib/client.js` at all, and drop their `dock:sync` / `dock:check` scripts.
+- Consumers stay pinned to `0.3.0`: the two remaining fragments (loopback predicates, host guard) are unchanged, so `loopback:check` / `guard:check` keep comparing against that version byte for byte.
+
 ## 0.3.0 - 2026-09-22
 
 - New `dsh-plugin-docs`: a bilingual docs structure check, adopted from the `check-docs.mjs` copy each plugin repository carried. Same interface: no arguments checks the README and CHANGELOG pairs for structural alignment, `--base <revision>` requires bilingual pairs to change together. This package's own bilingual docs are now checked by it too.
