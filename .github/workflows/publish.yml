@@ -28,7 +28,7 @@ jobs:
           test "v$version" = "$GITHUB_REF_NAME"
           npm install
           npm test
-          node --check dist/bootstrap.js
+          for f in dist/*.js; do node --check "$f"; done
           node --check bin/dsh-mini-utility-dock.js
           npm pack --dry-run
       - name: Check registry

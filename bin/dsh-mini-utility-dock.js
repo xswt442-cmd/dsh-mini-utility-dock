@@ -30,11 +30,12 @@ import { fileURLToPath } from 'node:url'
 
 // Listed in dependency order: the guard fragment reads the predicates the
 // loopback fragment declares, so a consumer that wants the guard syncs both, in
-// this order, into the same file.
+// this order, into the same file. The launcher is independent of both and lands
+// in the client half instead, so it sits last.
 const FRAGMENTS = [
-  { name: 'dsh-mini-utility-dock', source: 'bootstrap.js' },
   { name: 'dsh-loopback-helpers', source: 'loopback.js' },
-  { name: 'dsh-host-guard', source: 'guard.js' }
+  { name: 'dsh-host-guard', source: 'guard.js' },
+  { name: 'dsh-utility-launcher', source: 'launcher.js' }
 ]
 
 const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))

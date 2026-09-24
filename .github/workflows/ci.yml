@@ -18,6 +18,8 @@ jobs:
           node-version: 24
       - run: npm install
       - run: npm test
-      - run: node --check dist/bootstrap.js
+      # Every fragment, not a named one: a fragment can be retired or renamed, and
+      # a hardcoded path here silently breaks the gate when it is.
+      - run: for f in dist/*.js; do node --check "$f"; done
       - run: node --check bin/dsh-mini-utility-dock.js
       - run: npm pack --dry-run

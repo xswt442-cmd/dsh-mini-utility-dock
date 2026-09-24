@@ -15,9 +15,9 @@ DSH 插件族的共享资产：源码片段、嵌入 CLI，以及围绕它们的
 
 | 片段 | 标记 | 目标文件 | 导出 |
 | --- | --- | --- | --- |
-| dock 引导 | `dsh-mini-utility-dock` | `lib/client.js` | — |
 | loopback 判定 | `dsh-loopback-helpers` | `lib/shared.js` | `LOOPBACK_HOSTNAMES`、`normalizeHostValue`、`hostHostname`、`isLoopbackName`、`isLoopbackAddress` |
 | host 请求守卫 | `dsh-host-guard` | `lib/shared.js` | `portOf`、`GUARD_REASONS`、`DEFAULT_GUARD_POLICY` |
+| utility 入口 | `dsh-utility-launcher` | `lib/client.js` | `registerUtilityLauncher`、`UTILITY_ITEM_SLOT` |
 
 ## 使用
 
@@ -33,11 +33,11 @@ CLI 处理文件中所有已标记的片段，按 `FRAGMENTS` 顺序自下而上
 本仓库等价入口（目标由调用方传入）：
 
 ```sh
-npm run dock:embed -- check path/to/client.js
-npm run dock:embed -- sync path/to/client.js
+npm run dock:embed -- check path/to/shared.js
+npm run dock:embed -- sync path/to/shared.js
 ```
 
-消费插件以 `loopback:sync` / `guard:sync` 调用同一 CLI，目标固定为自身 `lib/shared.js`。
+消费插件以 `loopback:sync` / `guard:sync` 调用同一 CLI，目标固定为自身 `lib/shared.js`；client 半以 `launcher:sync` 维护 `dsh-utility-launcher` 块，目标固定为自身 `lib/client.js`。
 
 ## 约束
 
@@ -45,7 +45,6 @@ npm run dock:embed -- sync path/to/client.js
 - `lib/shared.js` 中两个片段顺序固定，`dsh-loopback-helpers` 在前：`dsh-host-guard` 直接使用前一片段导出的模块级名字，既不重新声明也不 import。
 - 片段不得包含 `import` 或 `require`；消费插件必须能独立发布。
 - `bindGuard` 不从片段导出——消费插件在同一文件中声明自己的 guard 导出。各插件通过 `policy` 传入自身错误码与文案，判定逻辑共用。
-- `label` 缺省、空白或非字符串时回退为 `id`。
 
 ## 跨仓一致性
 

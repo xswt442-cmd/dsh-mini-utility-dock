@@ -8,9 +8,9 @@ import { spawn } from 'node:child_process'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const cli = join(root, 'bin', 'dsh-mini-utility-dock.js')
-const bootstrap = await readFile(join(root, 'dist', 'bootstrap.js'), 'utf8')
 const loopback = await readFile(join(root, 'dist', 'loopback.js'), 'utf8')
 const guard = await readFile(join(root, 'dist', 'guard.js'), 'utf8')
+const launcher = await readFile(join(root, 'dist', 'launcher.js'), 'utf8')
 
 function run(...args) {
   return new Promise((resolve) => {
@@ -24,14 +24,14 @@ function run(...args) {
 
 test('sync embeds the canonical fragment and preserves marker indentation', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
-  const file = join(dir, 'client.js')
-  await writeFile(file, 'const plugin = {}\n    // <dsh-mini-utility-dock>\n    // </dsh-mini-utility-dock>\n')
+  const file = join(dir, 'shared.js')
+  await writeFile(file, 'export const VERSION = 1\n    // <dsh-loopback-helpers>\n    // </dsh-loopback-helpers>\n')
   const result = await run('sync', file)
   assert.equal(result.code, 0, result.stderr)
   const source = await readFile(file, 'utf8')
-  assert.match(source, /    \/\/ <dsh-mini-utility-dock>/)
-  assert.match(source, /    const DOCK_KEY/)
-  assert.match(source, /    \/\/ <\/dsh-mini-utility-dock>/)
+  assert.match(source, /    \/\/ <dsh-loopback-helpers>/)
+  assert.match(source, /    export const LOOPBACK_HOSTNAMES/)
+  assert.match(source, /    \/\/ <\/dsh-loopback-helpers>/)
   assert.equal((await run('check', file)).code, 0)
   assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
 })
@@ -39,22 +39,15 @@ test('sync embeds the canonical fragment and preserves marker indentation', asyn
 test('check rejects stale or malformed files with a useful error', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
   const stale = join(dir, 'stale.js')
-  await writeFile(stale, '// <dsh-mini-utility-dock>\n// old\n// </dsh-mini-utility-dock>\n')
+  await writeFile(stale, '// <dsh-host-guard>\n// old\n// </dsh-host-guard>\n')
   const staleResult = await run('check', stale)
   assert.equal(staleResult.code, 1)
   assert.match(staleResult.stderr, /out of date/)
   const malformed = join(dir, 'malformed.js')
-  await writeFile(malformed, '// <dsh-mini-utility-dock>\n')
+  await writeFile(malformed, '// <dsh-host-guard>\n')
   const malformedResult = await run('sync', malformed)
   assert.equal(malformedResult.code, 1)
   assert.match(malformedResult.stderr, /exactly one marked block/)
-})
-
-test('bootstrap remains a classic self-contained protocol v1 script', () => {
-  assert.doesNotMatch(bootstrap, /^\s*(?:import|export)\s/m)
-  assert.doesNotMatch(bootstrap, /\brequire\s*\(/)
-  assert.match(bootstrap, /createhelper\.dsh\.utility-dock/)
-  assert.match(bootstrap, /DOCK_VERSION = 1/)
 })
 
 // A host half embeds BOTH shared.js fragments, so the CLI maintains every marked
@@ -105,6 +98,34 @@ test('every marked block in the target file is maintained', async () => {
   assert.match(unknownResult.stderr, /no fragment marker found/)
 })
 
+test('the launcher fragment is a classic self-contained client fragment', () => {
+  // It lands in a browser bundle, so it must not import, export or require: the
+  // consumer's own factory scope supplies React and h.
+  assert.doesNotMatch(launcher, /^\s*(?:import|export)\s/m)
+  assert.doesNotMatch(launcher, /\brequire\s*\(/)
+  // The two names a consumer needs, plus the contract it joins.
+  assert.match(launcher, /const registerUtilityLauncher = \(scope\) =>/)
+  assert.match(launcher, /const UTILITY_ITEM_SLOT = 'createhelper\.utility\.item'/)
+  assert.match(launcher, /__CREATEHELPER_DSH_UTILITY_LAUNCHER_V1__/)
+  // It declares the menu seat it renders; that declaration is what authorizes the
+  // other plugins' rows.
+  assert.match(launcher, /children: \{ \[UTILITY_ITEM_SLOT\]: \{ kind: 'list', scope: 'root' \} \}/)
+})
+
+test('sync embeds the launcher block into a client half', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const file = join(dir, 'client.js')
+  await writeFile(file, 'const plugin = {}\n    // <dsh-utility-launcher>\n    // </dsh-utility-launcher>\n')
+  const result = await run('sync', file)
+  assert.equal(result.code, 0, result.stderr)
+  const source = await readFile(file, 'utf8')
+  assert.match(source, /    \/\/ <dsh-utility-launcher>/)
+  assert.match(source, /    const registerUtilityLauncher = \(scope\) =>/)
+  assert.match(source, /    \/\/ <\/dsh-utility-launcher>/)
+  assert.equal((await run('check', file)).code, 0)
+  assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
+})
+
 test('neither fragment reaches for anything the consumer must install', () => {
   // Both are embedded into a host half, not a browser bundle, so ESM is expected
   // — but neither may import, because they share one consumer file and would
@@ -141,15 +162,15 @@ test('every dock:embed command documented in the READMEs actually runs', async (
   assert.equal(script, 'node bin/dsh-mini-utility-dock.js')
 
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
-  const file = join(dir, 'client.js')
-  await writeFile(file, '// <dsh-mini-utility-dock>\n// </dsh-mini-utility-dock>\n')
+  const file = join(dir, 'shared.js')
+  await writeFile(file, '// <dsh-loopback-helpers>\n// </dsh-loopback-helpers>\n')
   // Pre-sync so the documented `check` (listed first in the READMEs) passes.
   assert.equal((await run('sync', file)).code, 0)
   const sample = file.replace(/\\/g, '/')
 
   for (const name of ['README.md', 'README.en.md']) {
     const doc = await readFile(join(root, name), 'utf8')
-    const commands = [...doc.matchAll(/npm run dock:embed( -- (?:check|sync))? path\/to\/client\.js/g)]
+    const commands = [...doc.matchAll(/npm run dock:embed( -- (?:check|sync))? path\/to\/shared\.js/g)]
     assert.ok(commands.length, `${name} should document dock:embed usage`)
     for (const [, args] of commands) {
       const viaNpm = await new Promise((resolve) => {
