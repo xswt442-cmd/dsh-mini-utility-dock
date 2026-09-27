@@ -3,7 +3,7 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
-## Unreleased
+## 0.6.0 - 2026-09-28
 
 - 新增 `dist/host-http.js`（标记 `dsh-host-http`）：宿主半的响应胶水收成一块——`sendJson`（一律带 `no-store`）、POST 门、浏览器授权器、`optionalSessionId`，回复策略自此只有一份定义。已发布的词汇（`need_post`、中文文案、回带 `action`）由 `policy` 覆盖，公开标识符不变。
 - `createBrowserAuthorizer` 收访问器而非值：宿主半的 Connection 会被服务重载置空再赋新值，捕获值的那一版会一直把请求交给一个已销毁的 Connection。

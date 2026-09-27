@@ -3,7 +3,7 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
-## Unreleased
+## 0.6.0 - 2026-09-28
 
 - New `dist/host-http.js` (marker `dsh-host-http`): the host half's reply glue becomes one block — `sendJson` (always `no-store`), the POST gate, the browser authorizer, `optionalSessionId` — so a reply policy has one definition. An already published vocabulary (`need_post`, Chinese wording, the echoed `action`) is a `policy` override, so no public identifier changes.
 - `createBrowserAuthorizer` takes accessors, not values: a service reload reassigns a host half's Connection to `null` and later to a new instance, and the value-shaped version would keep handing requests to a destroyed Connection.
