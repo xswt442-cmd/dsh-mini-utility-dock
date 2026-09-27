@@ -11,7 +11,7 @@ const bin = join(root, 'bin', 'dsh-plugin-docs.js')
 
 function run(cwd, ...args) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [bin, ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(process.execPath, [bin, ...args], { cwd, stdio: ['ignore', 'pipe', 'pipe'], env: childEnv() })
     let stdout = ''; let stderr = ''
     child.stdout.on('data', (chunk) => { stdout += chunk })
     child.stderr.on('data', (chunk) => { stderr += chunk })
@@ -38,7 +38,16 @@ async function fixture(overrides = {}) {
   return dir
 }
 
-const git = (dir, ...args) => execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8' }).trim()
+// A test that shells out to git must not inherit the repository it runs inside.
+// Under a pre-commit or pre-push hook, GIT_DIR and friends point at the outer
+// repository, and `git init` in a temporary directory then re-inits THAT one —
+// the "re-init: ignored --initial-branch" warning is the only visible symptom,
+// while the fixture quietly commits onto the wrong history. Strip the anchoring
+// variables so every fixture finds its own repository by directory.
+const ANCHORS = /^(GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE|GIT_OBJECT_DIRECTORY|GIT_ALTERNATE_OBJECT_DIRECTORIES|GIT_COMMON_DIR|GIT_PREFIX|GIT_NAMESPACE|GIT_REAL_DIR)$/
+const childEnv = () => Object.fromEntries(Object.entries(process.env).filter(([name]) => !ANCHORS.test(name)))
+
+const git = (dir, ...args) => execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', env: childEnv() }).trim()
 
 function initRepo(dir) {
   git(dir, 'init', '-q', '--initial-branch=main')
