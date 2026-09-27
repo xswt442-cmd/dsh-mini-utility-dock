@@ -1,38 +1,44 @@
 // Cross-repo drift check for the shared host fragments.
 //
-// Why this exists: each member repository ships its own copy of the loopback
-// predicates and the request guard, because each package has to stand alone.
-// Those copies drifted repeatedly, and every drift was security-relevant:
+// Why this exists: every member repository embeds its own copy of the loopback
+// predicates and the request guard, because every package has to stand alone, and
+// hand-copied enforcement code drifts in ways that are always
+// security-relevant — an IPv6 loopback that reads as foreign and locks a
+// legitimate browser out of its own API, Host spellings two copies disagree on,
+// a Host that parses to no hostname skipping the allowlist in one copy while
+// another denies it.
 //
-//   1. every copy rejected IPv6 loopback (`::1`) — a legitimate browser was
-//      locked out of its own API;
-//   2. the copies disagreed on which Host spellings count as loopback, leaving
-//      one of them with an allowlist entry its Origin path could never reach;
-//   3. a Host that parsed to no hostname silently skipped the allowlist in one
-//      copy and was denied in the others.
+// The copies are no longer hand-written: they are embedded blocks generated from
+// dsh-mini-utility-dock by the dock CLI — `dist/loopback.js` (the predicates),
+// `dist/guard.js` (the enforcement policy) and `dist/host-http.js` (the response
+// glue: JSON replies, the POST gate, the browser authorizer). So this checker
+// asserts three things a generator alone cannot:
 //
-// The copies are no longer hand-written: they are two embedded blocks generated
-// from dsh-mini-utility-dock by the dock CLI — `dist/loopback.js` (the predicates)
-// and `dist/guard.js` (the enforcement policy). So this checker asserts three
-// things a generator alone cannot:
-//
-//   * both embedded blocks are byte-identical in every member (a hand edit to
-//     one copy, or a repo that never re-ran `loopback:sync` / `guard:sync`, fails
-//     here), and they appear in dependency order — the guard uses the predicates
-//     the loopback block declares in the same file;
+//   * every embedded block is byte-identical in every member (a hand edit to
+//     one copy, or a repo that never re-ran `loopback:sync` / `guard:sync` /
+//     `http:sync`, fails here), and they appear in dependency order — the guard
+//     uses the predicates the loopback block declares in the same file;
 //   * no repo keeps a private copy of an enforcement decision beside them — that
-//     is how drifts 1-3 happened, and embedding the blocks is worthless if a repo
-//     also branches on its own version;
+//     is how the drifts above happened, and embedding the blocks is worthless if
+//     a repo also branches on its own version;
 //   * the members AGREE ON EVERY DECISION. Error codes and wording deliberately
 //     differ (each plugin's published API vocabulary), so the comparison is on
 //     the allow/deny outcome only. This is the assertion that survives a policy
 //     change: byte equality implies it, but only this proves each consumer
 //     actually routes through the blocks.
 //
+// The host-HTTP block is in the compared set for the same reason the guard is:
+// what it carries is policy. A response header that keeps live port and session
+// data out of caches, and the reply for "browser authorization is unavailable",
+// are exactly the lines a hand-copied glue function loses on one repo.
+//
 // Usage:
 //   dsh-plugin-parity --root <dir> --member <repo>:<export> [--member ...]
+//   dsh-plugin-parity --root <dir> --member ... --fleet <repo>
+//     # `--fleet` names the one member that opts into fleet mode, so the check
+//     # that the relaxation stays bounded runs against its guard alone
 //   dsh-plugin-parity --root <dir>       # static checks for every member found
-//   dsh-plugin-parity --self-test        # exercises the extractor alone
+//   dsh-plugin-parity --self-test        # exercises the block extractor and the block-dropping step
 //
 // `--member` names one participating repository and the guard factory it
 // exports. That name is per-repository by design — the shared block is not
@@ -44,11 +50,12 @@
 // markers is checked statically, and the decision comparison is skipped.
 //
 // This is a LOCAL DIAGNOSTIC, deliberately not a CI gate. Per-repo CI already
-// proves the stronger local property — `loopback:check` / `guard:check` compare
-// each repo's embedded blocks against the `dist/` of the exact dock version it
-// pins, and that version is immutable on npm. Members pinning one version
-// therefore hold byte-identical blocks by construction, which is why this script
-// is redundant as a gate and was removed from the compat workflow.
+// proves the stronger local property — `loopback:check` / `guard:check` /
+// `http:check` compare each repo's embedded blocks against the `dist/` of the
+// exact dock version it pins, and that version is immutable on npm. Members
+// pinning one version therefore hold byte-identical blocks by construction,
+// which is why this script is redundant as a CI gate and stays a manual
+// diagnostic instead.
 //
 // The property it asserts is inherently cross-repository and cannot hold at an
 // arbitrary moment: on a `dev` push the peer checkouts resolve to their default
@@ -99,25 +106,42 @@ const discovered = () => readdirSync(root, { withFileTypes: true })
 const repos = members.length ? members : discovered().map((name) => [name, name, null])
 const tags = repos.map(([, tag]) => tag).join('/')
 
-// Dependency order: the guard block uses the predicates the loopback block
-// declares, so it must come second.
+// The order the blocks sit in `lib/shared.js`: the guard block uses the
+// predicates the loopback block declares in the same file, so the predicates must
+// come first, and the host-HTTP block lands below the guard, where a consumer's
+// own glue has always lived. `FRAGMENTS` in the dock CLI lists the same order, so
+// `dropBlocks` and the position check below can treat this table as the file's
+// true layout.
 const BLOCKS = [
   { name: 'dsh-loopback-helpers', label: 'loopback predicates' },
-  { name: 'dsh-host-guard', label: 'host guard' }
+  { name: 'dsh-host-guard', label: 'host guard' },
+  { name: 'dsh-host-http', label: 'host HTTP glue' }
 ]
 
 const marks = (name) => ({ start: `// <${name}>`, end: `// </${name}>` })
 
 // Pull a generated block out of a consumer's lib/shared.js. Everything between
-// the markers is generator output, so it must match byte for byte; the consumer
-// indents it, which is stripped before comparing.
+// the markers is generator output, so it must match once re-indented. A consumer
+// re-indents the whole block to its marker's own indentation, and the dock's
+// `sync` preserves that indentation, so two repos that indent their markers
+// differently still hold the same block. Stripping the block's shared leading
+// whitespace — not a fixed 2 spaces — is what makes them compare equal.
 const extractBlock = (src, name) => {
   const { start, end } = marks(name)
   const lines = src.split(/\r?\n/)
   const starts = lines.reduce((hits, line, i) => line.trim() === start ? [...hits, i] : hits, [])
   const ends = lines.reduce((hits, line, i) => line.trim() === end ? [...hits, i] : hits, [])
   if (starts.length !== 1 || ends.length !== 1 || ends[0] <= starts[0]) return null
-  return lines.slice(starts[0] + 1, ends[0]).map((line) => line.replace(/^\s{2}/, '')).join('\n').trim()
+  const body = lines.slice(starts[0] + 1, ends[0])
+  // The least-indented non-blank line carries exactly the block's indentation, so
+  // removing that many leading whitespace characters from every line restores the
+  // fragment's own relative indentation, whether the marker used 2 spaces, 4, or a
+  // tab. A fragment always has top-level (column-0) lines, so the minimum is its
+  // indent, not a deeper body line.
+  const indent = body.reduce((min, line) => line.trim() === '' ? min
+    : Math.min(min, (/^[ \t]*/.exec(line) || [''])[0].length), Infinity)
+  const strip = Number.isFinite(indent) ? indent : 0
+  return body.map((line) => line.trim() === '' ? '' : line.slice(strip)).join('\n').trim()
 }
 
 const read = (repo) => readFileSync(join(root, repo, 'lib', 'shared.js'), 'utf8')
@@ -153,12 +177,19 @@ const dockPinOf = (repo) => {
 if (process.argv.includes('--self-test')) {
   const good = [
     marks('dsh-loopback-helpers').start, 'const a = 1', marks('dsh-loopback-helpers').end,
-    marks('dsh-host-guard').start, 'const b = 2', marks('dsh-host-guard').end
+    marks('dsh-host-guard').start, 'const b = 2', marks('dsh-host-guard').end,
+    marks('dsh-host-http').start, 'const c = 3', marks('dsh-host-http').end,
+    // The plugin's own code, which `dropBlocks` must leave behind.
+    'export const pluginLine = 7'
   ].join('\n')
   const cases = [
     ['first block extracted', 'dsh-loopback-helpers', good, 'const a = 1'],
     ['second block extracted', 'dsh-host-guard', good, 'const b = 2'],
+    ['third block extracted', 'dsh-host-http', good, 'const c = 3'],
     ['indent is stripped', 'dsh-loopback-helpers', [marks('dsh-loopback-helpers').start, '  const a = 1', marks('dsh-loopback-helpers').end].join('\n'), 'const a = 1'],
+    ['four-space indent is stripped', 'dsh-loopback-helpers', [marks('dsh-loopback-helpers').start, '    const a = 1', marks('dsh-loopback-helpers').end].join('\n'), 'const a = 1'],
+    ['tab indent is stripped', 'dsh-loopback-helpers', [marks('dsh-loopback-helpers').start, '\tconst a = 1', marks('dsh-loopback-helpers').end].join('\n'), 'const a = 1'],
+    ['relative indent is kept', 'dsh-host-guard', [marks('dsh-host-guard').start, '    const b = 2', '      inner', marks('dsh-host-guard').end].join('\n'), 'const b = 2\n  inner'],
     ['missing end marker returns null', 'dsh-loopback-helpers', [marks('dsh-loopback-helpers').start, 'const a = 1'].join('\n'), null],
     ['absent block returns null', 'dsh-host-guard', good.replace(/dsh-host-guard/g, 'other'), null]
   ]
@@ -170,17 +201,19 @@ if (process.argv.includes('--self-test')) {
     else console.log(`self-test ok   ${label}`)
     if (!ok) bad++
   }
-  // Dropping both blocks must leave only the plugin's own code.
+  // Dropping every block must remove the generated bodies and leave the plugin's
+  // own code intact. A leftover body would read as a private enforcement decision;
+  // a dropped plugin line would mean the splices overreached.
   const residual = dropBlocks(good)
-  const dropOk = !/const a = 1|const b = 2/.test(residual)
-  console.log(dropOk ? 'self-test ok   both blocks dropped' : `self-test FAIL both blocks dropped: ${JSON.stringify(residual)}`)
+  const dropOk = !/const a = 1|const b = 2|const c = 3/.test(residual) && /export const pluginLine = 7/.test(residual)
+  console.log(dropOk ? 'self-test ok   every block dropped, plugin code kept' : `self-test FAIL block dropping: ${JSON.stringify(residual)}`)
   if (!dropOk) bad++
   process.exit(bad ? 1 : 0)
 }
 
 let failures = 0
 
-// 1. Both generated blocks must be present, byte-identical everywhere, and in
+// 1. Every generated block must be present, byte-identical everywhere, and in
 //    dependency order.
 for (const block of BLOCKS) {
   const copies = repos.map(([repo, tag]) => ({ repo, tag, body: extractBlock(read(repo), block.name) }))
@@ -207,7 +240,7 @@ for (const block of BLOCKS) {
 // 2. Every repo must embed from the same dock version. A skew here is the one
 //    cross-repo cause of divergence that per-repo checks cannot see: each repo's
 //    own `guard:check` passes against whatever it pins, so a repo left on an older
-//    dock stays green while its blocks differ from its siblings'.
+//    dock stays green while its blocks differ from the other members'.
 {
   const pins = repos.map(([repo, tag]) => ({ tag, pin: dockPinOf(repo) }))
   const unset = pins.filter((p) => p.pin === null)
@@ -219,7 +252,7 @@ for (const block of BLOCKS) {
     console.log(`FAIL dock pin: versions differ — ${pins.map((p) => `${p.tag}=${p.pin}`).join(' ')}`)
     failures++
   } else {
-    // An exact pin is what makes the sibling repos hold identical blocks: a range
+    // An exact pin is what makes every member hold identical blocks: a range
     // could resolve to different builds under one declared value.
     const exact = /^\d+\.\d+\.\d+$/.test(distinct[0])
     if (!exact) {
@@ -232,45 +265,50 @@ for (const block of BLOCKS) {
 }
 
 // The guard block reads what the loopback block declares in the same file, so the
-// order is load-bearing, not cosmetic.
+// order is load-bearing, not cosmetic. `FRAGMENTS` in the dock CLI documents one
+// order and every consumer writes that one, so a member whose blocks sit any
+// other way has either hand-moved a block or embedded from a different dock —
+// both of which make its `check` results harder to read than this line makes them.
 {
   let orderBad = 0
   for (const [repo, tag] of repos) {
     const src = read(repo)
-    const loop = spanOf(src, 'dsh-loopback-helpers')
-    const guard = spanOf(src, 'dsh-host-guard')
-    if (!loop || !guard) continue
-    if (loop.from > guard.from) {
-      console.log(`FAIL ${tag}: the host guard block precedes the loopback predicates`)
-      orderBad++
+    const placed = BLOCKS
+      .map((block) => ({ block, span: spanOf(src, block.name) }))
+      .filter((entry) => entry.span !== null)
+    for (let i = 1; i < placed.length; i++) {
+      if (placed[i - 1].span.from > placed[i].span.from) {
+        console.log(`FAIL ${tag}: the ${placed[i].block.label} block precedes the ${placed[i - 1].block.label} block`)
+        orderBad++
+      }
     }
   }
   if (orderBad) failures += orderBad
-  else console.log('ok   block order: the loopback predicates precede the host guard everywhere')
+  else console.log('ok   block order: loopback predicates, then host guard, then host HTTP glue, everywhere')
 }
 
 // 3. Embedding the blocks is worthless if a repo also keeps its own enforcement
 //    beside them. Policy is expected outside the blocks; decisions are not.
 //
-//    `remoteAddress` is deliberately NOT listed on its own: a plugin may keep a
-//    second helper that applies the same criterion for a different gate
-//    (dsh-instance-manager's `requestNeedsBearer` does exactly that, so the API
-//    route and the guard cannot drift apart). A private criterion only matters
-//    when the repo also owns a private guard, which the factory check catches.
+//    Every pattern here matches a CODE SHAPE, not a word. These files are scanned
+//    as text with the generated blocks dropped, so a bare keyword also matches
+//    prose: a doc comment explaining why a private helper is NOT a second guard
+//    used to fail the very repository that documented its reasoning. An
+//    explanation is not enforcement; reading a header or declaring a function is.
 const ENFORCEMENT = [
-  [/LOOPBACK_HOSTNAMES\s*=/, 'redefines LOOPBACK_HOSTNAMES'],
+  [/LOOPBACK_HOSTNAMES\s*=(?!=)/, 'redefines LOOPBACK_HOSTNAMES'],
   [/(?:const|function|let)\s+isLoopbackName\b/, 'defines a private isLoopbackName'],
   [/(?:const|function|let)\s+isLoopbackAddress\b/, 'defines a private isLoopbackAddress'],
   [/(?:const|function|let)\s+hostHostname\b/, 'defines a private hostHostname'],
   [/(?:const|function|let)\s+bindGuard\b/, 'defines a private guard factory'],
-  [/sec-fetch-site/, 'branches on Fetch Metadata outside the blocks']
+  [/\[\s*['"]sec-fetch-site['"]\s*\]/, 'reads Fetch Metadata outside the blocks'],
+  [/\{[^}]*['"]sec-fetch-site['"]\s*[,:}]/, 'reads Fetch Metadata outside the blocks']
 ]
 for (const [repo, tag] of repos) {
   const outside = dropBlocks(read(repo))
-  const problems = ENFORCEMENT.filter(([re]) => re.test(outside)).map(([, why]) => why)
-  if (/remoteAddress/.test(outside) && /function\s+guard\s*\(|=>\s*\{\s*$/.test(outside)) {
-    problems.push('looks like a private guard reading the socket peer')
-  }
+  // The bracket read and the destructuring read share one reason, so collapse the
+  // two patterns' matches into a single report line.
+  const problems = [...new Set(ENFORCEMENT.filter(([re]) => re.test(outside)).map(([, why]) => why))]
   if (problems.length) {
     console.log(`FAIL ${tag}: ${problems.join('; ')}`)
     failures++
@@ -398,7 +436,8 @@ else console.log(`ok   decisions: ${cases.length} cases agree across ${tags}`)
 //    member named by `--fleet` opts in. Assert the relaxation stays bounded: a
 //    fleet guard still rejects a cross-site request, a foreign Origin, and a
 //    missing peer.
-const fleetMember = members.find(([repo]) => repo === flagOf('--fleet')) || null
+const fleetFlag = flagOf('--fleet')
+const fleetMember = fleetFlag ? members.find(([repo]) => repo === fleetFlag) : null
 const fleetCases = [
   ['fleet admits a peer host', { host: 'box.lan:3080' }, 'allow'],
   ['fleet admits a remote peer', { host: '127.0.0.1:3080', peer: '203.0.113.7' }, 'allow'],
@@ -406,8 +445,14 @@ const fleetCases = [
   ['fleet still rejects foreign Origin', { host: 'box.lan:3080', origin: 'https://evil.example' }, 'deny'],
   ['fleet still rejects a missing peer', { host: 'box.lan:3080', peer: null }, 'deny']
 ]
-if (!fleetMember) {
+if (!fleetFlag) {
   console.log('ok   fleet bounds: skipped (pass --fleet <repo> to check the member that opts in)')
+} else if (!fleetMember) {
+  // Passing `--fleet` asks for the relaxation boundary to be tested; a name that
+  // matches no member means that test never ran, so say FAIL rather than let the
+  // "skipped" line read as a pass for a check that was requested but not performed.
+  console.log(`FAIL fleet bounds: --fleet ${fleetFlag} is not one of the --member repositories (${members.map(([, tag]) => tag).join(', ')})`)
+  failures++
 } else {
   const fleetVerdict = (req) => verdict(fleetMember[0], fleetMember[2], { ...req, fleet: true })
   let fleetBad = 0
