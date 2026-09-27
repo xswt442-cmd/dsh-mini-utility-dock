@@ -1,28 +1,25 @@
-// Loopback predicates shared by the host halves of the DSH plugins.
+// The loopback predicates: which Host names and which peer addresses count as
+// loopback, for a plugin's host half that binds an API to the loopback interface.
 //
 // This fragment has ONE source of truth: dsh-mini-utility-dock/dist/loopback.js.
-// DSH plugin host halves are plain Node ESM that each package ships standalone,
-// so the fragment is embedded into `lib/shared.js` at build time by
+// A host half is plain Node ESM that its package ships standalone, so the
+// fragment is embedded into `lib/shared.js` at build time by
 //   npm run loopback:sync    (write it)
 //   npm run loopback:check   (fail on drift)
 // instead of being imported: a bare `import 'dsh-mini-utility-dock/...'` would
-// put a runtime dependency on the dock into every plugin, and the whole point of
-// the dock is that a plugin ships standalone, with nothing else required.
-//
-// Why it is shared at all: these predicates were copy-pasted per repo and
-// drifted twice. The first drift rejected IPv6 loopback everywhere; the second
-// is that consumers disagreed on which Host spellings count as loopback
-// (see the parity bin this package ships, which compares this block across repositories).
+// put a runtime dependency on this package into the file that embeds it, and an
+// embedding plugin ships standalone, with nothing else required.
 //
 // "Loopback" is decided in exactly one place — LOOPBACK_HOSTNAMES plus the
 // IPv4-mapped IPv6 form of each entry — and both the name and the address
-// predicate route through it, so the Host path and the peer path cannot drift
-// apart again.
+// predicate route through it, so the Host path and the peer path cannot
+// disagree. Every spelling this file accepts is a documented one; anything
+// unrecognised fails closed.
 //
 // Kept a separate fragment from the host guard on purpose: the predicates are
 // stable facts about what an address is, while the guard is a policy about who
-// may call an API. `dist/guard.js` imports this module, so the guard depends on
-// this block and never the other way round.
+// may call an API. The guard block reads the names this block declares, so it
+// depends on this block and never the other way round.
 
 // Hostnames a request to a loopback-bound API may legitimately arrive with.
 // Exact spellings only: `api.localhost` and `127.0.0.1.evil.example` must stay

@@ -1,13 +1,14 @@
-// Host-side request guard shared by the DSH plugins.
+// Host-side same-origin request guard, for a plugin's host half that binds an
+// API to loopback.
 //
 // This fragment has ONE source of truth: dsh-mini-utility-dock/dist/guard.js.
-// DSH plugin host halves are plain Node ESM that each package ships standalone,
-// so the fragment is embedded into `lib/shared.js` at build time by
+// A host half is plain Node ESM that its package ships standalone, so the
+// fragment is embedded into `lib/shared.js` at build time by
 //   npm run guard:sync    (write it)
 //   npm run guard:check   (fail on drift)
 // instead of being imported: a bare `import 'dsh-mini-utility-dock/...'` would
-// put a runtime dependency on the dock into every plugin, and the whole point of
-// the dock is that a plugin ships standalone, with nothing else required.
+// put a runtime dependency on this package into the file that embeds it, and an
+// embedding plugin ships standalone, with nothing else required.
 //
 // This file is the POLICY half. What counts as loopback is a separate fragment
 // (`dist/loopback.js`, embedded under the `dsh-loopback-helpers` marker), and
@@ -21,18 +22,15 @@
 // file, so an import of another module would both break the standalone promise
 // and collide with the exports the block above already declares.
 //
-// Why the guard is shared rather than reimplemented per plugin: each consumer
-// carried its own `createGuard`, and the copies diverged repeatedly. The
-// parts that differed were never the *decisions* — they were the error codes and
-// message strings welded into the same function, which forced every repo to keep
-// its own copy and made drift possible. Here the enforcement order and every
-// decision are fixed, and the wording is supplied as data by the caller
-// (`policy`), so a plugin customizes its vocabulary without forking the logic.
+// The enforcement order and every decision are fixed here, and the wording is
+// supplied as data by the caller (`policy`): a plugin customizes the codes and
+// messages its own API publishes without forking the checks. Keeping the
+// vocabulary out of the decisions is what makes one copy of them enough.
 
 // Default ports each scheme normalises away, so an Origin carrying no explicit
 // port (for example `http://127.0.0.1`) compares equal to a server on 80/443.
-// `new URL('http://127.0.0.1:80').port` is '', which compared unequal to "80"
-// and turned a legitimate same-origin request into a rejection.
+// `new URL('http://127.0.0.1:80').port` is '', which would read as unequal to
+// `80` and reject a legitimate same-origin request.
 const DEFAULT_PORTS = { 'http:': '80', 'https:': '443' }
 export const portOf = (url) => url.port || DEFAULT_PORTS[url.protocol] || ''
 
@@ -41,10 +39,9 @@ export const portOf = (url) => url.port || DEFAULT_PORTS[url.protocol] || ''
 // plugin's API exposes and the human wording are policy.
 //
 // An unidentifiable peer and an off-loopback peer are deliberately distinct
-// decisions. Two plugins answer `non_loopback_peer` for both; one distinguishes
-// them. Both distinctions are correct for their own API, and a plugin that
-// collapses them names the same `code` for each — nothing widens either way,
-// because every reason rejects.
+// decisions, because they are distinct facts about the request. A caller may map
+// both to the same `code`: that is a vocabulary choice about its published API,
+// and nothing widens either way, because every reason rejects.
 export const GUARD_REASONS = Object.freeze([
   'non_loopback_peer',
   'cross_site',
@@ -66,9 +63,9 @@ export const DEFAULT_GUARD_POLICY = Object.freeze({
  * Build the same-origin request guard for a loopback-bound API route.
  *
  * Not exported under a plugin-facing name: each plugin publishes its own guard
- * bound to its own error vocabulary, so the name it exports — usually
- * `createGuard`, matching its previous API — is its own to declare. This is the
- * one factory every plugin calls.
+ * bound to its own error vocabulary, so the name it exports — `createGuard` is
+ * the conventional one — is the plugin's own to declare. This is the one factory
+ * every plugin that embeds this block calls.
  *
  * Enforces, in order: Fetch Metadata, an unparseable Host, the TCP peer address,
  * then the Host allowlist, then the Origin. Rejects by calling
