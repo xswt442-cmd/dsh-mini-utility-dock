@@ -1,7 +1,7 @@
 {
   "name": "dsh-mini-utility-dock",
   "version": "0.5.1",
-  "description": "The DSH plugin family's shared assets: source fragments (the loopback predicates and host request guard for host halves, the utility launcher for client halves), the embedding CLI, and the family diagnostics — cross-repo drift check and bilingual docs structure check.",
+  "description": "The DSH plugin family's shared assets: source fragments (the loopback predicates, host request guard and host HTTP glue for host halves, the utility launcher for client halves), the embedding CLI, and the family diagnostics — cross-repo drift check and bilingual docs structure check.",
   "type": "module",
   "bin": {
     "dsh-mini-utility-dock": "bin/dsh-mini-utility-dock.js",
@@ -29,6 +29,11 @@
     "type": "git",
     "url": "git+https://github.com/xswt442-cmd/dsh-mini-utility-dock.git"
   },
+  "homepage": "https://github.com/xswt442-cmd/dsh-mini-utility-dock#readme",
+  "bugs": {
+    "url": "https://github.com/xswt442-cmd/dsh-mini-utility-dock/issues"
+  },
+  "author": "xswt442-cmd",
   "keywords": [
     "dsh",
     "deepseek-harness",

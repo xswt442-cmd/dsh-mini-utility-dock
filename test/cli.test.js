@@ -3,13 +3,14 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawn } from 'node:child_process'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const cli = join(root, 'bin', 'dsh-mini-utility-dock.js')
 const loopback = await readFile(join(root, 'dist', 'loopback.js'), 'utf8')
 const guard = await readFile(join(root, 'dist', 'guard.js'), 'utf8')
+const hostHttp = await readFile(join(root, 'dist', 'host-http.js'), 'utf8')
 const launcher = await readFile(join(root, 'dist', 'launcher.js'), 'utf8')
 
 function run(...args) {
@@ -48,6 +49,41 @@ test('check rejects stale or malformed files with a useful error', async () => {
   const malformedResult = await run('sync', malformed)
   assert.equal(malformedResult.code, 1)
   assert.match(malformedResult.stderr, /exactly one marked block/)
+})
+
+// Two blocks whose markers interleave (`<A> <B> </A> </B>`) have overlapping line
+// ranges, so the bottom-up splice would have a later pass rewrite lines an earlier
+// pass just generated. `locate()` refuses such a file rather than emitting a
+// corrupted one, and the refusal happens before anything is written.
+test('interleaved marker ranges are refused and corrupt nothing', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const interleaved = join(dir, 'interleaved.js')
+  const source = [
+    '// <dsh-loopback-helpers>',
+    '// <dsh-host-guard>',
+    '// </dsh-loopback-helpers>',
+    '// </dsh-host-guard>',
+    ''
+  ].join('\n')
+  await writeFile(interleaved, source, 'utf8')
+  const result = await run('sync', interleaved)
+  assert.equal(result.code, 1)
+  assert.match(result.stderr, /overlap/)
+  assert.equal(await readFile(interleaved, 'utf8'), source, 'a refused file is never written')
+
+  // The same markers, but properly nested block-to-block (disjoint ranges), still
+  // sync — the refusal is about overlap, not about which fragment comes first.
+  const disjoint = join(dir, 'disjoint.js')
+  await writeFile(disjoint, [
+    '// <dsh-host-guard>',
+    '// </dsh-host-guard>',
+    '',
+    '// <dsh-loopback-helpers>',
+    '// </dsh-loopback-helpers>',
+    ''
+  ].join('\n'), 'utf8')
+  assert.equal((await run('sync', disjoint)).code, 0)
+  assert.equal((await run('check', disjoint)).code, 0)
 })
 
 // A host half embeds BOTH shared.js fragments, so the CLI maintains every marked
@@ -98,6 +134,82 @@ test('every marked block in the target file is maintained', async () => {
   assert.match(unknownResult.stderr, /no fragment marker found/)
 })
 
+// A host half embeds all three shared.js blocks in one file: the predicates, the
+// guard that reads them, and the HTTP glue below both. One `sync` must fill all
+// three, and the result must be a module the consumer can actually import — no
+// duplicated declaration, no stray `import`, no name that collides with the block
+// above it.
+test('the three host-side blocks sync into one consumer file in one pass', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const file = join(dir, 'shared.mjs')
+  await writeFile(file, [
+    'export const VERSION = 1',
+    '',
+    '// <dsh-loopback-helpers>',
+    '// </dsh-loopback-helpers>',
+    '',
+    '// <dsh-host-guard>',
+    '// </dsh-host-guard>',
+    '',
+    '// <dsh-host-http>',
+    '// </dsh-host-http>',
+    '',
+    // The consumer's own lines, which read what the blocks declare.
+    'export const hostGuard = (options) => bindGuard({ ...options, respond: sendJson })',
+    'export const requirePost = createRequirePost()',
+    ''
+  ].join('\n'))
+
+  const result = await run('sync', file)
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /dsh-loopback-helpers, dsh-host-guard, dsh-host-http/, 'reports all three blocks')
+  const source = await readFile(file, 'utf8')
+
+  // File order matches the FRAGMENTS order, which is what makes the bottom-up
+  // splice land on the right lines.
+  assert.ok(source.indexOf('// <dsh-loopback-helpers>') < source.indexOf('// <dsh-host-guard>'))
+  assert.ok(source.indexOf('// <dsh-host-guard>') < source.indexOf('// <dsh-host-http>'))
+  for (const name of ['dsh-loopback-helpers', 'dsh-host-guard', 'dsh-host-http']) {
+    assert.equal((source.match(new RegExp(`^// <${name}>$`, 'gm')) || []).length, 1, `exactly one ${name} block`)
+  }
+  assert.doesNotMatch(source, /^\s*import\s/m, 'the assembled file must still import nothing')
+
+  assert.equal((await run('check', file)).code, 0)
+  assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
+
+  // The three blocks plus the consumer's two lines form a working module.
+  const mod = await import(pathToFileURL(file).href)
+  const res = {
+    status: null,
+    headers: null,
+    body: null,
+    writeHead(status, headers) { this.status = status; this.headers = headers; return this },
+    end(body) { this.body = body }
+  }
+  assert.equal(mod.hostGuard({ currentPort: () => 3080 })(
+    { method: 'GET', headers: { host: '127.0.0.1:3080' }, socket: { remoteAddress: '127.0.0.1' } },
+    { writeHead() {}, end() {} }
+  ), true)
+  assert.equal(mod.requirePost({ method: 'GET' }, res, 'stop'), false)
+  assert.equal(res.status, 405)
+  assert.equal(res.headers['cache-control'], 'no-store')
+})
+
+test('a stale host-HTTP block is the only thing check complains about', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
+  const file = join(dir, 'shared.mjs')
+  await writeFile(file, '// <dsh-host-http>\n// </dsh-host-http>\n')
+  assert.equal((await run('sync', file)).code, 0)
+  assert.equal((await run('check', file)).code, 0)
+  const drifted = (await readFile(file, 'utf8')).replace("'cache-control': 'no-store'", "'cache-control': 'no-cache'")
+  await writeFile(file, drifted, 'utf8')
+  const checked = await run('check', file)
+  assert.equal(checked.code, 1)
+  assert.match(checked.stderr, /out of date: .*dsh-host-http\b/)
+  assert.equal((await run('sync', file)).code, 0)
+  assert.match(await readFile(file, 'utf8'), /'cache-control': 'no-store'/)
+})
+
 test('the launcher fragment is a classic self-contained client fragment', () => {
   // It lands in a browser bundle, so it must not import, export or require: the
   // consumer's own factory scope supplies React and h.
@@ -126,11 +238,11 @@ test('sync embeds the launcher block into a client half', async () => {
   assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
 })
 
-test('neither fragment reaches for anything the consumer must install', () => {
-  // Both are embedded into a host half, not a browser bundle, so ESM is expected
-  // — but neither may import, because they share one consumer file and would
-  // collide with what the other block declares.
-  for (const [name, text] of [['loopback', loopback], ['guard', guard]]) {
+test('no fragment reaches for anything the consumer must install', () => {
+  // The host-side blocks are embedded into one file, so none of them may import:
+  // an import would both break the standalone promise and collide with what
+  // another block in the same file already declares.
+  for (const [name, text] of [['loopback', loopback], ['guard', guard], ['host-http', hostHttp]]) {
     assert.doesNotMatch(text, /\brequire\s*\(/, `${name} must not require()`)
     assert.doesNotMatch(text, /^\s*import\s/m, `${name} must not import`)
   }
@@ -150,6 +262,15 @@ test('neither fragment reaches for anything the consumer must install', () => {
   // block and declares the same name would otherwise collide with it.
   assert.doesNotMatch(guard, /^export const createGuard\b/m, 'the factory stays module-private')
   assert.match(guard, /^const bindGuard = /m)
+  // The HTTP glue exports the plugin-facing names a consumer used to declare
+  // itself, so a consumer deletes its own copies rather than wrapping these.
+  for (const exported of ['sendJson', 'createRequirePost', 'createBrowserAuthorizer', 'connectionUnavailable', 'CONNECTION_UNAVAILABLE', 'optionalSessionId']) {
+    assert.match(hostHttp, new RegExp(`^export (?:const|function) ${exported}\\b`, 'm'), `host-http must export ${exported}`)
+  }
+  // Nothing in the glue block may shadow a name a sibling block declares.
+  for (const owned of ['bindGuard', 'isLoopbackName', 'isLoopbackAddress', 'hostHostname', 'portOf', 'GUARD_REASONS']) {
+    assert.doesNotMatch(hostHttp, new RegExp(`(?:const|function|let)\\s+${owned}\\b`), `host-http must not redeclare ${owned}`)
+  }
 })
 
 test('every dock:embed command documented in the READMEs actually runs', async () => {

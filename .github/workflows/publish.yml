@@ -1,49 +1,136 @@
 name: publish
 
+# A release is: bump package.json#version, write the matching CHANGELOG section in
+# both languages, merge to `main`, and tag that commit `vX.Y.Z`. `RELEASING.md`
+# holds the procedure and the obligations a release of this package creates.
+#
+# The tag must point at a commit that is already on `main`: this workflow is what
+# publishes, so the commit it publishes has to be the one that was reviewed and
+# ran through CI. Nothing here holds a repository-write credential except the job
+# that cuts the GitHub release.
+
 on:
   push:
     tags: ['v*']
 
+# Read-only by default; the one job that needs more declares it on itself, and it
+# is the job that runs no repository code beyond one notes script.
+permissions:
+  contents: read
+
+# A second tag landing while the first is still on npm would race the registry, so
+# publishes queue rather than cancel each other.
 concurrency:
   group: publish
   cancel-in-progress: false
 
 jobs:
-  publish:
+  # Everything that executes this repository's code runs here, with a token that
+  # cannot write to the repository: GITHUB_TOKEN is exported into every step of a
+  # job, so a `contents: write` job that also runs `npm test` would hand a
+  # repository-write credential to the code under test.
+  checks:
+    name: release checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history: the ancestry check below needs a `main` to compare
+          # against, and a shallow clone cannot answer that question.
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: 'npm'
+      # From the tracked lockfile, with lifecycle scripts off: this gate must not
+      # depend on anything an install hook decides to run.
+      - run: npm ci --ignore-scripts
+      - name: Tag matches package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+      - name: Tag is on main
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `push: tags` fires from whatever ref the tag sits on, so without this
+          # gate a tag cut on an unreviewed branch — or on a commit that was never
+          # green anywhere — would still publish. A squash or rebase merge also
+          # replays the release commit as a different object, which is why tagging
+          # happens on `main` rather than on `dev`.
+          git fetch --no-tags --force origin main:refs/remotes/origin/main
+          if git merge-base --is-ancestor HEAD refs/remotes/origin/main; then
+            echo "ok: $GITHUB_REF_NAME points at a commit that is on main"
+          else
+            echo "::error::refusing to publish: $GITHUB_REF_NAME ($(git rev-parse --short HEAD)) is not an ancestor of origin/main"
+            exit 1
+          fi
+      - name: Release checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          npm run docs:check
+          for f in bin/*.js dist/*.js; do node --check "$f"; done
+          node bin/dsh-plugin-parity.js --self-test
+          npm pack --dry-run
+
+  npm:
+    name: publish to npm
+    needs: checks
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write
+      contents: read # Nothing here writes to the repository.
+      id-token: write # npm provenance (OIDC).
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - name: Verify tag and package
-        id: sanity
-        shell: bash
-        run: |
-          version=$(node -p "require('./package.json').version")
-          test "v$version" = "$GITHUB_REF_NAME"
-          npm install
-          npm test
-          for f in dist/*.js; do node --check "$f"; done
-          node --check bin/dsh-mini-utility-dock.js
-          npm pack --dry-run
-      - name: Check registry
-        id: registry
+          cache: 'npm'
+      - run: npm ci --ignore-scripts
+      - name: Skip when the version is already published
+        id: published
         shell: bash
         run: |
           version=$(node -p "require('./package.json').version")
           if npm view "dsh-mini-utility-dock@$version" version >/dev/null 2>&1; then
-            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "already=yes" >> "$GITHUB_OUTPUT"
+            echo "::warning::$version is already on npm — nothing to publish"
           fi
+      # Auth is npm Trusted Publishing: the OIDC exchange needs id-token: write and
+      # is bound to this repository plus this workflow file in the package's
+      # npmjs.com settings. No npm token exists in this repository.
       - name: Publish to npm
-        if: steps.registry.outputs.published != 'true'
+        if: steps.published.outputs.already != 'yes'
         run: npm publish --provenance --access public
-      - name: GitHub release from changelog (idempotent)
-        if: always() && steps.sanity.outcome == 'success'
+
+  # The only job holding a repository-write credential, and the only one that does
+  # not run the code under test. It needs `checks` but not `npm`, so a version
+  # published out of band — like the first one, before npm knew this package name —
+  # still gets its notes, and a registry hiccup does not take the release down.
+  release:
+    name: GitHub release from changelog
+    needs: [checks, npm]
+    if: always() && needs.checks.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Create the matching GitHub release.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # full history, so the notes can find the previous tag
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: GitHub release (idempotent)
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -58,10 +145,8 @@ jobs:
           else
             notes=$(printf '%s\n\n**完整变更**: [`%s`](%s/commits/%s)' "$notes" "$tag" "$repo" "$tag")
           fi
-          # Not gated on the publish step: a version published out of band — like
-          # the first one, before npm knows this package name at all — still needs
-          # its notes here. Re-running must converge rather than fail over an
-          # occupied name, so an existing release is refreshed instead.
+          # Re-running must converge rather than fail over an occupied name, so an
+          # existing release is refreshed instead.
           if gh release view "$tag" > /dev/null 2>&1; then
             echo "::warning::release $tag already exists - refreshing its notes"
             gh release edit "$tag" --title "$tag" --notes "$notes"
