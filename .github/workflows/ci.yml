@@ -16,10 +16,17 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-      - run: npm install
+          cache: 'npm'
+      # From the lockfile, and with lifecycle scripts off: this package's own
+      # gate must not depend on anything a dependency could run at install time.
+      - run: npm ci --ignore-scripts
       - run: npm test
+      # The consumers run the `dsh-plugin-docs` bin this package publishes, so
+      # the package's own bilingual pair is checked by the same code path.
+      - run: npm run docs:check
       # Every fragment, not a named one: a fragment can be retired or renamed, and
       # a hardcoded path here silently breaks the gate when it is.
       - run: for f in dist/*.js; do node --check "$f"; done
-      - run: node --check bin/dsh-mini-utility-dock.js
+      - run: for f in bin/*.js; do node --check "$f"; done
+      - run: node bin/dsh-plugin-parity.js --self-test
       - run: npm pack --dry-run
