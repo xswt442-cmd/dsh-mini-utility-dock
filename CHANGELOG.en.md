@@ -3,18 +3,32 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## Unreleased
+
+- New `dist/host-http.js` (marker `dsh-host-http`): the host half's reply glue becomes one block — `sendJson` (always `no-store`), the POST gate, the browser authorizer, `optionalSessionId` — so a reply policy has one definition. An already published vocabulary (`need_post`, Chinese wording, the echoed `action`) is a `policy` override, so no public identifier changes.
+- `createBrowserAuthorizer` takes accessors, not values: a service reload reassigns a host half's Connection to `null` and later to a new instance, and the value-shaped version would keep handing requests to a destroyed Connection.
+- The comments that ride verbatim into a consumer's repository with the launcher and host-http fragments now state the facts: no sentence misdescribes what the other copies do, and host-http's analogy to a guard-block name says where that name comes from.
+- `dsh-mini-utility-dock`'s `sync`/`check` reject a file whose marker ranges overlap (`<A> <B> </A> </B>`) and leave it unwritten, closing off the corruption the bottom-up splice could previously produce.
+- `dsh-plugin-parity` compares the `dsh-host-http` block byte for byte, and its block-position assertion now covers all three host blocks.
+- The parity bin's "private implementation outside the blocks" scan matches code shapes only: both the bracketed and the destructured Fetch Metadata read count, `LOOPBACK_HOSTNAMES` is caught on assignment but not comparison, and a composite heuristic that could false-FAIL a reasonable repository is gone — so a comment that explains why a helper is not a second guard no longer reads as drift.
+- The parity bin's block comparison strips each block's common indentation, so a consumer that indents its markers by 4 spaces or a tab is no longer reported as drift; `--fleet` naming a repository that is not a member now fails with a non-zero exit instead of the "skipped" line reading as a pass.
+- `dsh-plugin-docs --base` no longer dies inside `git diff` on an all-zero SHA — which is what `github.event.before` carries for a new or force-pushed branch; it notes that there is no previous state and still completes the structural checks.
+- `dsh-plugin-docs` now compares the `Unreleased` section for version, section and item structure — it is the most-edited section each round and was previously outside the check.
+- Tests filled in: process-level behavior for the two diagnostic bins, decision-level behavior for `dist/loopback.js`, `dist/guard.js` and the new fragment, and one `FRAGMENTS` integrity assertion, with a paired case for each behavior change above.
+- Maintenance: CI installs with `npm ci --ignore-scripts` and caches npm, both workflows run `docs:check`, syntax checks cover `bin` and `dist`, `publish.yml` gates on the tag being an ancestor of `main`, and `homepage`, `bugs` and `author` are filled in. Being dependency-free, this package now tracks `package-lock.json` so `npm ci` and the cache have one (reason in `.gitignore`).
+
 ## 0.5.1 - 2026-09-25
 
 - Fix the launcher disappearing after a hot reload: the claim is released with its owner, which wakes the other copies to register again instead of requiring a full page reload.
 
 ## 0.5.0 - 2026-09-24
 
-- New `dist/launcher.js` (marker `dsh-utility-launcher`): the family's shared entry point — one icon at the bottom-left that opens a menu of the family's panels. It goes through slots rather than a page-local protocol: one copy of the assembly runs per page (the first plugin to load wins the `window` mutex and declares the menu seat `createhelper.utility.item`), and every other plugin contributes one row to that seat. Consumers maintain it with `launcher:sync` / `launcher:check`, so the three client halves no longer each carry their own copy.
+- New `dist/launcher.js` (marker `dsh-utility-launcher`): one icon at the bottom-left that opens a menu of utility panels, assembled through the host's slots rather than a page-local protocol. Exactly one copy runs per page (the first to load wins a `window` mutex and declares the menu seat `createhelper.utility.item`) and every other copy adds one row to it; consumers maintain it with `launcher:sync` / `launcher:check`.
 
 ## 0.4.0 - 2026-09-24
 
-- Remove `dist/bootstrap.js` (the dock bootstrap fragment) and its `FRAGMENTS` row. It made every consumer append a `position:fixed; z-index:9997` container to `document.body` and locate it by measuring the sidebar — so it necessarily floated above the page and covered the composer's own controls. The three consumers now register the host's `sidebar.footer.action` seat instead (an icon button directly above Settings), embed no fragment in `lib/client.js` at all, and drop their `dock:sync` / `dock:check` scripts.
-- Consumers stay pinned to `0.3.0`: the two remaining fragments (loopback predicates, host guard) are unchanged, so `loopback:check` / `guard:check` keep comparing against that version byte for byte.
+- Remove `dist/bootstrap.js` (the page-local dock bootstrap fragment) and its `FRAGMENTS` row: it appended a self-measuring `position:fixed` container to every consumer's `document.body`, so it necessarily floated above the page and covered the composer's own controls. Consumers now register the host's `sidebar.footer.action` seat, embed no fragment in `lib/client.js`, and have dropped `dock:sync` / `dock:check`.
+- The two host-side fragments (loopback predicates, host guard) are unchanged, so consumers stay pinned to `0.3.0` and `loopback:check` / `guard:check` keep comparing against that version.
 
 ## 0.3.0 - 2026-09-22
 
@@ -28,18 +42,15 @@ For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
 ## 0.1.8 - 2026-09-21
 
-- The two host-side fragments no longer say "sibling": the three phrasings now state the design goal itself — a plugin ships standalone, with nothing else required. A fragment is embedded verbatim into each consumer, where the word had no referent.
-- The fragments' bytes change, so consumers must re-run `loopback:sync` / `guard:sync` and raise their pin to 0.1.8.
+- The two host-side fragments drop "sibling" and state the design goal directly: a plugin ships standalone, with nothing else required.
 
 ## 0.1.7 - 2026-09-20
 
-- The two host-side fragments no longer state how many consumers exist: "all three plugins", "the three disagree" and "the three plugins / diverged three times" give way to wording that names no count. A fragment is embedded verbatim into each consumer, where the reader cannot know how many other consumers there are — the count is workspace knowledge, not that repository's.
-- The fragments' bytes change, so consumers must re-run `loopback:sync` / `guard:sync` and raise their pin to 0.1.7.
+- The two host-side fragments no longer state how many consumers exist ("all three plugins", "the three disagree", "diverged three times" give way to wording that names no count): a fragment is embedded verbatim into a consumer's repository, where no reader can check that count.
 
 ## 0.1.6 - 2026-09-20
 
-- Fix the `allowRemoteHost` note in `dist/guard.js`: it read "stop being admitted", the opposite of what the code does — that mode skips both checks, so it admits them. The JSDoc was already right; only this inline comment was inverted.
-- The fragment's bytes change, so consumers must re-run `guard:sync` and raise their pin to 0.1.6.
+- Fix the `allowRemoteHost` note in `dist/guard.js`: it read "stop being admitted", the opposite of what the code does — that mode skips both checks, so it admits them.
 
 ## 0.1.5 - 2026-09-17
 
