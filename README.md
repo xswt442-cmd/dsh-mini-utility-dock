@@ -56,11 +56,11 @@ npm run dock:embed -- sync path/to/shared.js
 
 `dsh-plugin-parity`（本包提供的 bin）直接检这条跨仓性质：逐块（剥离块的公共缩进后）比对三个 host 块（含 `dsh-host-http`）、pin 一致性断言、块落点顺序断言与行为级对比。它是人工诊断工具，**不在 CI 中运行**：peer 处于不同分支时该性质本就不成立。成员表由调用方经 `--member <repo>:<export>` 提供——守卫工厂的导出名按片段设计是各仓自定的，故本工具不预设任何成员；`--fleet <repo>` 点名唯一启用 fleet 模式的成员，只对它检查「放宽有边界」，点名不在成员表中的仓即判 FAIL 并非零退出；不带 `--member` 时只跑静态检查，自动发现所有嵌入了宿主守卫块的仓。`--self-test` 不需要任何 checkout：它用内联样例检验块提取与「丢块」两步，改动这两个函数后先跑它。
 
-`dsh-plugin-docs`（同样是本包的 bin）校验双语文档的结构对齐：README 中英标题层级与代码围栏一致，CHANGELOG 中英版本段（含 `Unreleased` 段）、分类段与条目数一致（分类标题经双语映射归一）；`--base <revision>` 额外要求双语对同改，单边改动即缺翻译。该 revision 是全 0 的 null OID 时（新建分支或强推时 `github.event.before` 就是这个值）没有可比的前态，这一项跳过并给出提示，其余结构校验照常。接入方式是各仓自己的 `docs:check` script 指向它——本包自身的双语文档也由此校验。
+`dsh-plugin-docs`（同样是本包的 bin）校验双语文档的结构对齐。它不预设文档名：检查哪些文档对、文件位于哪个目录、按什么形状比较，都由调用仓通过 `--config <module>` 提供一个 `{ name, zh, en, shape? }` 数组决定；本包用同一种方式声明自己的 `docs.config.mjs`。形状有两种。默认的 `markdown` 比较中英两侧的标题层级序列与代码围栏语言，围栏内的内容豁免，因为语言相关的示例写在那里。`changelog` 比较中英两侧的版本段（含 `Unreleased` 段）、分类段与小节条目数，分类标题经双语映射归一。`--base <revision>` 额外要求声明的每一对文件在该 revision 之后一起改动，单边改动即缺翻译；revision 为全 0 的 null OID（新建分支或强推时 `github.event.before` 即为此值）时没有可比的前态，这一项跳过并给出提示，其余结构校验照常。各仓的 `docs:check` script 调用它。
 
 ## 开发与验证
 
-片段是唯一来源，所以一次改动要同时过片段行为、CLI 与文档这三层；下面是本仓的完整校验（与 `AGENTS.md` 的 Verify 块一致，发布步骤见 `RELEASING.md`）：
+片段是唯一来源，所以一次改动要同时过片段行为、CLI 与文档这三层；下面是本仓的完整校验（与 `AGENTS.md` 的 Verify 块一致，发布步骤见 `docs/RELEASING.md`）：
 
 ```sh
 npm test

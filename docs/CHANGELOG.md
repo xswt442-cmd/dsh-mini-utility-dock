@@ -3,6 +3,13 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## Unreleased
+
+### 变更
+
+- `dsh-plugin-docs` 不再预设文档名。检查哪些文档对、各自的路径与比较形状由调用仓的 `--config <module>` 提供，该模块导出 `{ name, zh, en, shape? }` 数组；`shape` 缺省为 `markdown`（比标题层级序列与代码围栏语言），`changelog` 比版本段、分类段与小节条目数。未在配置中声明的文档不参与比较，因此调用方的 `docs:check` 需要带上 `--config`。
+- 本包的 `CHANGELOG.md`、`CHANGELOG.en.md`、`RELEASING.md` 移入 `docs/`，仓库根目录只留两份 README、`LICENSE` 与 `AGENTS.md`；npm 包内的两份 CHANGELOG 随新路径发布。
+
 ## 0.6.0 - 2026-09-28
 
 - 新增 `dist/host-http.js`（标记 `dsh-host-http`）：宿主半的响应胶水收成一块——`sendJson`（一律带 `no-store`）、POST 门、浏览器授权器、`optionalSessionId`，回复策略自此只有一份定义。已发布的词汇（`need_post`、中文文案、回带 `action`）由 `policy` 覆盖，公开标识符不变。

@@ -14,12 +14,12 @@
     "README.md",
     "README.en.md",
     "LICENSE",
-    "CHANGELOG.md",
-    "CHANGELOG.en.md"
+    "docs/CHANGELOG.md",
+    "docs/CHANGELOG.en.md"
   ],
   "scripts": {
     "dock:embed": "node bin/dsh-mini-utility-dock.js",
-    "docs:check": "node bin/dsh-plugin-docs.js",
+    "docs:check": "node bin/dsh-plugin-docs.js --config docs.config.mjs",
     "test": "node --test test/*.test.js"
   },
   "engines": {

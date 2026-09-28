@@ -1,28 +1,31 @@
 #!/usr/bin/env node
-// Bilingual structure check for the documentation pair a repository ships:
-// README.md against README.en.md, CHANGELOG.md against CHANGELOG.en.md.
+// Bilingual structure check for the documentation pairs a repository ships.
 //
-// Verifies, naming no repository and taking no file arguments (the four file
-// names are fixed by convention, not passed in):
-//   * both READMEs share the same heading-level sequence and code-fence
-//     languages — content inside fences is exempt, since that is where
-//     language-specific examples live;
-//   * both CHANGELOGs expose the same releases — the `Unreleased` section
+// The pairs are the repository's own declaration — `--config <module>` points at
+// a module exporting `{ name, zh, en, shape? }` entries, so which documents
+// exist, where they live, and how each is compared is decided there, never here.
+// Two shapes are provided:
+//   * `markdown` (the default): both files share the same heading-level sequence
+//     and code-fence languages — content inside fences is exempt, since that is
+//     where language-specific examples live;
+//   * `changelog`: both files expose the same releases — the `Unreleased` section
 //     included, since that is where the newest edits land — with version, date,
 //     per-section item counts, section titles normalized through a bilingual
 //     category map (新增/Added, 修复/Fixed, ...);
-//   * with `--base <revision>`, both files of each pair changed together
-//     since that revision — a one-sided edit is a missing translation. An
-//     all-zero revision is the null OID, which is what `github.event.before`
+//   * with `--base <revision>`, both files of every declared pair changed
+//     together since that revision — a one-sided edit is a missing translation.
+//     An all-zero revision is the null OID, which is what `github.event.before`
 //     carries for a branch that was just created or force-pushed: there is no
-//     previous revision to diff against, so that one requirement is skipped
-//     with a note instead of dying inside `git diff`.
+//     previous revision to diff against, so that one requirement is skipped with
+//     a note instead of dying inside `git diff`.
 //
 // Repositories opt in through their own `docs:check` script; this package
-// runs the same check on its own bilingual docs.
+// declares its pairs the same way.
 
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const read = (file) => fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
 
@@ -105,16 +108,6 @@ const category = new Map([
   ['维护', 'maintenance'], ['Maintenance', 'maintenance'],
 ])
 
-function assertEqual(left, right, message) {
-  if (JSON.stringify(left) !== JSON.stringify(right)) {
-    throw new Error(`${message}\nleft:  ${JSON.stringify(left)}\nright: ${JSON.stringify(right)}`)
-  }
-}
-
-const zhReadme = markdownShape('README.md')
-const enReadme = markdownShape('README.en.md')
-assertEqual(zhReadme, enReadme, 'README structure differs between languages')
-
 const normalizeLog = (file) => changelogShape(file).map((release) => ({
   version: release.version,
   date: release.date,
@@ -123,7 +116,47 @@ const normalizeLog = (file) => changelogShape(file).map((release) => ({
     items,
   })),
 }))
-assertEqual(normalizeLog('CHANGELOG.md'), normalizeLog('CHANGELOG.en.md'), 'CHANGELOG structure differs between languages')
+
+function assertEqual(left, right, message) {
+  if (JSON.stringify(left) !== JSON.stringify(right)) {
+    throw new Error(`${message}\nleft:  ${JSON.stringify(left)}\nright: ${JSON.stringify(right)}`)
+  }
+}
+
+// The repository declares its own pairs; this tool names none of them. Paths are
+// read from the current directory, so run it from the repository root — `--base`
+// compares against paths as Git reports them.
+async function loadPairs(argv) {
+  const index = argv.indexOf('--config')
+  const file = argv[index + 1]
+  if (index === -1 || !file) {
+    throw new Error('--config <module> is required: the module exports the bilingual pairs this repository ships')
+  }
+  if (!fs.existsSync(file)) throw new Error(`${file} not found — declare the repository's pairs there`)
+
+  const loaded = await import(pathToFileURL(path.resolve(file)).href)
+  const pairs = loaded.pairs ?? loaded.default
+
+  if (!Array.isArray(pairs) || pairs.length === 0) {
+    throw new Error(`${file}: export a non-empty array of pairs`)
+  }
+  for (const pair of pairs) {
+    for (const field of ['name', 'zh', 'en']) {
+      if (typeof pair?.[field] !== 'string' || !pair[field]) throw new Error(`${file}: every pair needs name, zh and en`)
+    }
+    if (pair.shape !== undefined && !shapes[pair.shape]) throw new Error(`${file}: ${pair.name}: unknown shape '${pair.shape}'`)
+  }
+  return pairs
+}
+
+const shapes = { markdown: markdownShape, changelog: normalizeLog }
+
+const pairs = await loadPairs(process.argv)
+
+for (const pair of pairs) {
+  const shape = shapes[pair.shape ?? 'markdown']
+  assertEqual(shape(pair.zh), shape(pair.en), `${pair.name} structure differs between languages`)
+}
 
 const baseIndex = process.argv.indexOf('--base')
 if (baseIndex !== -1) {
@@ -142,12 +175,9 @@ if (baseIndex !== -1) {
       .split(/\r?\n/)
       .filter(Boolean))
 
-    for (const [primary, translation] of [
-      ['README.md', 'README.en.md'],
-      ['CHANGELOG.md', 'CHANGELOG.en.md'],
-    ]) {
-      if (changed.has(primary) !== changed.has(translation)) {
-        throw new Error(`${primary} and ${translation} must change together`)
+    for (const pair of pairs) {
+      if (changed.has(pair.zh) !== changed.has(pair.en)) {
+        throw new Error(`${pair.zh} and ${pair.en} must change together`)
       }
     }
   }

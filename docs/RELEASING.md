@@ -19,7 +19,7 @@ that embed it. Read the whole list before you push a tag.
    - `package-lock.json` with `npm install --package-lock-only`, so its recorded
      version does not drift from the manifest.
    - Both changelogs: replace `## Unreleased` with `## X.Y.Z - YYYY-MM-DD` in
-     `CHANGELOG.md` and `CHANGELOG.en.md`, keeping the same sections, the same
+     `docs/CHANGELOG.md` and `docs/CHANGELOG.en.md`, keeping the same sections, the same
      number of bullets and the same order. That version section becomes
      the GitHub release notes verbatim (`scripts/release-notes.mjs`), so its
      reader is someone installing this package, not its historian.
@@ -29,7 +29,7 @@ that embed it. Read the whole list before you push a tag.
 
    ```sh
    npm test
-   node bin/dsh-plugin-docs.js
+   node bin/dsh-plugin-docs.js --config docs.config.mjs
    for f in bin/*.js dist/*.js; do node --check "$f"; done
    node bin/dsh-plugin-parity.js --self-test
    npm pack --dry-run
