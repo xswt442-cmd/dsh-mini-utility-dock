@@ -3,6 +3,13 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.7.0 - 2026-09-29
+
+### Changed
+
+- `dsh-plugin-docs` names no document. Which pairs to check, their paths and the shape each is compared with come from a `--config <module>` the calling repository supplies, exporting an array of `{ name, zh, en, shape? }`. `shape` defaults to `markdown` (heading-level sequence and code-fence languages); `changelog` compares releases, sections and per-section item counts. A document absent from that configuration is not compared, so a caller's `docs:check` passes `--config`.
+- This package's `CHANGELOG.md`, `CHANGELOG.en.md` and `RELEASING.md` move into `docs/`; the repository root keeps the two READMEs, `LICENSE` and `AGENTS.md`. The npm package ships the changelogs at their new paths.
+
 ## 0.6.0 - 2026-09-28
 
 - New `dist/host-http.js` (marker `dsh-host-http`): the host half's reply glue becomes one block — `sendJson` (always `no-store`), the POST gate, the browser authorizer, `optionalSessionId` — so a reply policy has one definition. An already published vocabulary (`need_post`, Chinese wording, the echoed `action`) is a `policy` override, so no public identifier changes.

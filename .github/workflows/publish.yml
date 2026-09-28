@@ -1,7 +1,7 @@
 name: publish
 
 # A release is: bump package.json#version, write the matching CHANGELOG section in
-# both languages, merge to `main`, and tag that commit `vX.Y.Z`. `RELEASING.md`
+# both languages, merge to `main`, and tag that commit `vX.Y.Z`. `docs/RELEASING.md`
 # holds the procedure and the obligations a release of this package creates.
 #
 # The tag must point at a commit that is already on `main`: this workflow is what
