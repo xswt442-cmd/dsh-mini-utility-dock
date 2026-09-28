@@ -42,7 +42,7 @@ npm run dock:embed -- sync path/to/shared.js
 
 ## 约束
 
-- `dist/` 是唯一来源。改片段后跑一遍下面「开发与验证」的命令，并让消费插件重新 `sync`。
+- `dist/` 是唯一来源。修改片段后执行下面「开发与验证」列出的命令，并让消费插件重新 `sync`。
 - `lib/shared.js` 中三个片段的落点固定：`dsh-loopback-helpers` → `dsh-host-guard` → `dsh-host-http`。守卫直接使用前一块声明的模块级名字，既不重新声明也不 import；`dsh-host-http` 不读上面两块、也不声明它们的名字，故可单独嵌入。落点顺序即 `FRAGMENTS` 顺序；`sync` 自下而上替换块，标记区间彼此交叠的文件会被直接拒绝、不写出任何内容。
 - `dsh-utility-launcher` 落在 client 半：每页只运行一份该装配（先加载的一方赢得 `window` 互斥并声明菜单座位），其余副本只往座位里投一行。这是运行时事实，不是样式选择。
 - 片段不得包含 `import` 或 `require`；消费插件必须能独立发布。
