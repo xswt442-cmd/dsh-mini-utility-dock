@@ -3,6 +3,12 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## 0.7.1 - 2026-09-29
+
+### 维护
+
+- 无接口变更：`dsh-plugin-docs` 与 `dsh-plugin-parity` 的参数、输出和 `dist/` 片段字节均未改动，本次只改写 bin 与测试中的说明文字，并把 README 里「结构对齐」的说法改为「结构一致性」。
+
 ## 0.7.0 - 2026-09-29
 
 ### 变更
