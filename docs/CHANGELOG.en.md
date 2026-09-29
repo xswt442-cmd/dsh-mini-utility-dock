@@ -3,6 +3,12 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## 0.7.1 - 2026-09-29
+
+### Maintenance
+
+- No interface changed: only the explanatory text in `bin/` and `test/` and two README phrasings were rewritten; `dist/`, the CLI arguments and the `--config` contract are untouched.
+
 ## 0.7.0 - 2026-09-29
 
 ### Changed
