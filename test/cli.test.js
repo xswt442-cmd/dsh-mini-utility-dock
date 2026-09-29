@@ -262,8 +262,8 @@ test('no fragment reaches for anything the consumer must install', () => {
   // block and declares the same name would otherwise collide with it.
   assert.doesNotMatch(guard, /^export const createGuard\b/m, 'the factory stays module-private')
   assert.match(guard, /^const bindGuard = /m)
-  // The HTTP glue exports the plugin-facing names a consumer used to declare
-  // itself, so a consumer deletes its own copies rather than wrapping these.
+  // The HTTP glue exports the plugin-facing names a consumer calls, so a consumer
+  // deletes its own copies of them rather than wrapping these.
   for (const exported of ['sendJson', 'createRequirePost', 'createBrowserAuthorizer', 'connectionUnavailable', 'CONNECTION_UNAVAILABLE', 'optionalSessionId']) {
     assert.match(hostHttp, new RegExp(`^export (?:const|function) ${exported}\\b`, 'm'), `host-http must export ${exported}`)
   }

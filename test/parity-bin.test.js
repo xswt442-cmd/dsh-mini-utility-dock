@@ -186,9 +186,8 @@ test('prose that names a policy keyword passes, code that reads it fails', async
 })
 
 // The bracket read above is one Fetch Metadata shape; a destructuring read is the
-// other, and the old bare-keyword version used to catch it while the bracket-only
-// pattern missed it. The contrast to prove: a comment that merely names the header
-// is still prose, but `const { 'sec-fetch-site': x } = req.headers` is enforcement.
+// other, and the patterns match both. A comment that merely names the header is
+// still prose, but `const { 'sec-fetch-site': x } = req.headers` is enforcement.
 test('a destructured Fetch Metadata read is reported; naming it in prose is not', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-parity-'))
   await member(dir, 'alpha')

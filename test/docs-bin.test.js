@@ -248,8 +248,8 @@ test('--base without a value is refused', async () => {
 
 // The crash this guards against: a workflow passes `github.event.before`, and on
 // a first push or a force-push that value is the null OID. `git diff 000... HEAD`
-// is not "no base" — it is an error, and it used to kill the check on a branch
-// that had done nothing wrong.
+// is not "no base" — it is an error, so the check names the null OID and skips
+// the pair test rather than failing the run.
 test('an all-zero base is the null OID, so the pair test is skipped rather than fatal', async () => {
   for (const zeros of ['0'.repeat(40), '0'.repeat(64)]) {
     const dir = await fixture()

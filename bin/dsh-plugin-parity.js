@@ -8,11 +8,11 @@
 // a Host that parses to no hostname skipping the allowlist in one copy while
 // another denies it.
 //
-// The copies are no longer hand-written: they are embedded blocks generated from
-// dsh-mini-utility-dock by the dock CLI — `dist/loopback.js` (the predicates),
-// `dist/guard.js` (the enforcement policy) and `dist/host-http.js` (the response
-// glue: JSON replies, the POST gate, the browser authorizer). So this checker
-// asserts three things a generator alone cannot:
+// The consumer copies are embedded blocks generated from this package's `dist/`
+// files by the dock CLI — `dist/loopback.js` (the predicates), `dist/guard.js`
+// (the enforcement policy) and `dist/host-http.js` (the response glue: JSON
+// replies, the POST gate, the browser authorizer). So this checker asserts three
+// things a generator alone cannot:
 //
 //   * every embedded block is byte-identical in every member (a hand edit to
 //     one copy, or a repo that never re-ran `loopback:sync` / `guard:sync` /
@@ -293,8 +293,8 @@ for (const block of BLOCKS) {
 //    Every pattern here matches a CODE SHAPE, not a word. These files are scanned
 //    as text with the generated blocks dropped, so a bare keyword also matches
 //    prose: a doc comment explaining why a private helper is NOT a second guard
-//    used to fail the very repository that documented its reasoning. An
-//    explanation is not enforcement; reading a header or declaring a function is.
+//    would read as a decision. An explanation is not enforcement; reading a
+//    header or declaring a function is.
 const ENFORCEMENT = [
   [/LOOPBACK_HOSTNAMES\s*=(?!=)/, 'redefines LOOPBACK_HOSTNAMES'],
   [/(?:const|function|let)\s+isLoopbackName\b/, 'defines a private isLoopbackName'],
