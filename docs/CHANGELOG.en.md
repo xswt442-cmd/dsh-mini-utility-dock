@@ -3,6 +3,12 @@
 Release notes are generated from the matching version section; newest first.
 For Chinese, see [CHANGELOG.md](CHANGELOG.md).
 
+## Unreleased
+
+### Maintenance
+
+- Each README fact occupies one line, with mechanism and rationale staying in the comments under `dist/` and `bin/`. The documented documentation-check command carries `--config docs.config.mjs`.
+
 ## 0.7.1 - 2026-09-29
 
 ### Maintenance

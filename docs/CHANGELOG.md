@@ -3,6 +3,12 @@
 Release Notes 由对应版本段生成；最新版本在前。
 英文版见 [CHANGELOG.en.md](CHANGELOG.en.md)。
 
+## Unreleased
+
+### 维护
+
+- README 每个事实占一行，机制与成因留在 `dist/` 与 `bin/` 的注释里。文档校验命令带 `--config docs.config.mjs`。
+
 ## 0.7.1 - 2026-09-29
 
 ### 维护
