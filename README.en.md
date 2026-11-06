@@ -50,8 +50,8 @@ npm run dock:embed -- check path/to/shared.js   # equivalent entry inside this r
 ## Cross-repo consistency
 
 - A consumer's `npm test` compares its embedded blocks byte for byte against the dock version it pins; versions are immutable and the pin is exact, so pin agreement is fragment agreement.
-- After a fragment is added, a consumer re-runs all four `sync` scripts and raises its pin to the released version; until then `check` does not compare the new block.
-- `dsh-plugin-parity` is a manual diagnostic and does not run in CI.
+- After a fragment is added, a consumer re-runs all four `sync` scripts and updates its pin to the released version; until then `check` does not compare the new block.
+- The cross-repo comparison in `dsh-plugin-parity` is a manual diagnostic and does not run in CI.
   - Blocks are compared after their common indentation is stripped. Four checks: the three host blocks are byte-identical and sit in dependency order; one exact dock pin; no private copy of an enforcement decision outside the blocks; the same allow/deny verdict in every member, with error codes and wording allowed to differ.
   - `--root <dir>`: the directory holding the repository checkouts.
   - `--member <repo>:<export>`: one participant and the guard factory it exports, repeated per participant; the tool presupposes no member.
@@ -62,7 +62,7 @@ npm run dock:embed -- check path/to/shared.js   # equivalent entry inside this r
   - `--config <module>`: a module exporting an array of `{ name, zh, en, shape? }` decides which pairs are checked, where they live and how each is compared.
   - `shape` defaults to `markdown` and compares the heading-level sequence and the code-fence languages, with fence content exempt.
   - `shape: 'changelog'` compares the version sections (the `Unreleased` section included), the category sections and the item counts.
-  - `--base <revision>`: both files of every pair must have changed since that revision, so a one-sided change is a missing translation.
+  - `--base <revision>`: a pair with a change on one side only since that revision is a missing translation.
   - An all-zero revision is the null OID, which leaves no previous state to compare, so that requirement is skipped with a note while the structure checks still run.
 
 ## Development and verification

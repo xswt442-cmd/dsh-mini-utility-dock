@@ -89,7 +89,7 @@ test('a rejected registration releases the claim instead of stranding it', () =>
   assert.equal(window.__CREATEHELPER_DSH_UTILITY_LAUNCHER_V1__.owner, waiting)
 })
 
-test('a claim left by the retired boolean latch is replaced, not trusted', () => {
+test('a non-object claim value on the page is replaced, not trusted', () => {
   const { registerUtilityLauncher, window } = loadFragment()
   window.__CREATEHELPER_DSH_UTILITY_LAUNCHER_V1__ = true
   const scope = scopeStub()

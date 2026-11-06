@@ -246,10 +246,9 @@ test('--base without a value is refused', async () => {
   assert.match(result.stderr, /--base requires a Git revision/)
 })
 
-// The crash this guards against: a workflow passes `github.event.before`, and on
-// a first push or a force-push that value is the null OID. `git diff 000... HEAD`
-// is not "no base" — it is an error, so the check names the null OID and skips
-// the pair test rather than failing the run.
+// A workflow passes `github.event.before`, and on a first push or a force-push
+// that value is the null OID. `git diff` rejects an all-zero base, so the check
+// names the null OID and skips the pair test.
 test('an all-zero base is the null OID, so the pair test is skipped rather than fatal', async () => {
   for (const zeros of ['0'.repeat(40), '0'.repeat(64)]) {
     const dir = await fixture()

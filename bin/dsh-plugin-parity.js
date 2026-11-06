@@ -109,7 +109,7 @@ const tags = repos.map(([, tag]) => tag).join('/')
 // The order the blocks sit in `lib/shared.js`: the guard block uses the
 // predicates the loopback block declares in the same file, so the predicates must
 // come first, and the host-HTTP block lands below the guard, where a consumer's
-// own glue has always lived. `FRAGMENTS` in the dock CLI lists the same order, so
+// own glue lives. `FRAGMENTS` in the dock CLI lists the same order, so
 // `dropBlocks` and the position check below can treat this table as the file's
 // true layout.
 const BLOCKS = [
@@ -499,8 +499,8 @@ for (const [fn, ...fnCases] of predicateCases) {
   else console.log(`ok   ${fn}: ${fnCases.length} cases agree across ${tags}`)
 }
 
-// 7. portOf normalises the default ports, which is what stopped a same-origin
-//    request on 80/443 from reading as a foreign Origin.
+// 7. portOf normalises the default ports, so a same-origin request on 80/443 is
+//    not read as a foreign Origin.
 {
   let portBad = 0
   const portCases = [

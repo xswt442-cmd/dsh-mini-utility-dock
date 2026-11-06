@@ -40,8 +40,8 @@ import { fileURLToPath } from 'node:url'
 //   1. the guard fragment reads the predicates the loopback fragment declares, so
 //      a consumer that wants the guard syncs both, loopback first;
 //   2. the host-http fragment lands below the guard block, where a consumer's own
-//      `lib/shared.js` glue has always lived. It depends on neither block above
-//      it and declares nothing they declare, so the three coexist in one file;
+//      `lib/shared.js` glue lives. It depends on neither block above it and
+//      declares nothing they declare, so the three coexist in one file;
 //   3. the launcher is independent of all of them and lands in the client half
 //      instead, so it sits last.
 //
@@ -85,7 +85,10 @@ function error(message) {
 async function loadTarget(fileName) {
   if (!fileName || fileName.startsWith('-')) throw new Error('consumer-file is required')
   const target = resolve(fileName)
-  const info = await stat(target).catch(() => null)
+  const info = await stat(target).catch((cause) => {
+    if (cause && cause.code === 'ENOENT') return null
+    throw cause
+  })
   if (!info) throw new Error(`file does not exist: ${target}`)
   if (!info.isFile()) throw new Error(`consumer-file is not a regular file: ${target}`)
   return { target, source: await readFile(target, 'utf8') }
@@ -95,11 +98,11 @@ function indentation(line) {
   return (/^[ \t]*/.exec(line) || [''])[0]
 }
 
-// Locate every marked block in the file, in fragment order. A host half embeds
-// all three shared.js fragments, so one command must maintain all of them;
-// processing them in FRAGMENTS order also keeps the dependency order (the guard
-// reads the predicates declared by the loopback block above it, and the HTTP glue
-// sits below both without reading either).
+// Locate every marked block in the file. A host half embeds all three shared.js
+// fragments, so one command must maintain all of them; each block is an
+// independent marker pair, and the dependency order (the guard reads the
+// predicates declared by the loopback block above it, and the HTTP glue sits
+// below both without reading either) belongs to the consumer's file layout.
 function locate(source) {
   const lines = source.split(/\r?\n/)
   const candidates = FRAGMENTS.map((fragment) => {

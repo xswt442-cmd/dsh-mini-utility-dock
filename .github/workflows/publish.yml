@@ -113,9 +113,9 @@ jobs:
         run: npm publish --provenance --access public
 
   # The only job holding a repository-write credential, and the only one that does
-  # not run the code under test. It needs `checks` but not `npm`, so a version
-  # published out of band — like the first one, before npm knew this package name —
-  # still gets its notes, and a registry hiccup does not take the release down.
+  # not run the code under test. It requires `checks` to have passed and only waits
+  # for `npm`, so a version published out of band still gets its notes, and a
+  # registry hiccup does not take the release down.
   release:
     name: GitHub release from changelog
     needs: [checks, npm]

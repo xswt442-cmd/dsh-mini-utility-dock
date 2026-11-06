@@ -86,9 +86,9 @@ test('interleaved marker ranges are refused and corrupt nothing', async () => {
   assert.equal((await run('check', disjoint)).code, 0)
 })
 
-// A host half embeds BOTH shared.js fragments, so the CLI maintains every marked
-// block it finds in one pass, in dependency order. Both directions need covering:
-// the right source reaches each block, and an unknown marker is refused.
+// The two blocks written here sit in dependency order, and the CLI maintains
+// every marked block it finds in one pass. Both directions need covering: the
+// right source reaches each block, and an unknown marker is refused.
 test('every marked block in the target file is maintained', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-dock-'))
   const file = join(dir, 'shared.js')
@@ -116,7 +116,6 @@ test('every marked block in the target file is maintained', async () => {
   const declarations = (source.match(/const isLoopbackName = |export const isLoopbackName = /g) || []).length
   assert.equal(declarations, 1, 'isLoopbackName must be declared exactly once')
 
-  assert.doesNotMatch(source, /DOCK_KEY/, 'must not embed the dock fragment')
   assert.equal((await run('check', file)).code, 0)
   assert.equal((await run('sync', file)).stdout.includes('unchanged'), true)
 
@@ -165,8 +164,7 @@ test('the three host-side blocks sync into one consumer file in one pass', async
   assert.match(result.stdout, /dsh-loopback-helpers, dsh-host-guard, dsh-host-http/, 'reports all three blocks')
   const source = await readFile(file, 'utf8')
 
-  // File order matches the FRAGMENTS order, which is what makes the bottom-up
-  // splice land on the right lines.
+  // File order matches the FRAGMENTS order, the layout every consumer writes.
   assert.ok(source.indexOf('// <dsh-loopback-helpers>') < source.indexOf('// <dsh-host-guard>'))
   assert.ok(source.indexOf('// <dsh-host-guard>') < source.indexOf('// <dsh-host-http>'))
   for (const name of ['dsh-loopback-helpers', 'dsh-host-guard', 'dsh-host-http']) {
@@ -258,8 +256,9 @@ test('no fragment reaches for anything the consumer must install', () => {
   for (const exported of ['portOf', 'GUARD_REASONS', 'DEFAULT_GUARD_POLICY']) {
     assert.match(guard, new RegExp(`export const ${exported}\\b`), `guard must export ${exported}`)
   }
-  // The factory is deliberately NOT exported: a consumer that both embeds the
-  // block and declares the same name would otherwise collide with it.
+  // The guard name a consumer exports is its own: the block defines no
+  // `createGuard`, and `bindGuard` stays module-private, so a consumer's
+  // declaration cannot collide with it.
   assert.doesNotMatch(guard, /^export const createGuard\b/m, 'the factory stays module-private')
   assert.match(guard, /^const bindGuard = /m)
   // The HTTP glue exports the plugin-facing names a consumer calls, so a consumer

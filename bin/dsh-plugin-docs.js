@@ -17,7 +17,7 @@
 //     An all-zero revision is the null OID, which is what `github.event.before`
 //     carries for a branch that was just created or force-pushed: there is no
 //     previous revision to diff against, so that one requirement is skipped with
-//     a note instead of dying inside `git diff`.
+//     a note.
 //
 // Repositories opt in through their own `docs:check` script; this package
 // declares its pairs the same way.
@@ -165,9 +165,9 @@ if (baseIndex !== -1) {
 
   // The null OID, in either hash length. A workflow that passes
   // `github.event.before` here gets it whenever a branch is created or
-  // force-pushed, and `git diff 000... HEAD` is not a comparison with no base —
-  // it is an error. So the honest reading is the one the push event states: there
-  // is nothing before this push, and the pair test cannot run.
+  // force-pushed; `git diff` rejects that base, and the honest reading is the one
+  // the push event states: there is nothing before this push, and the pair test
+  // cannot run.
   if (/^0+$/.test(base)) {
     console.log(`note: --base ${base} is the null OID (new branch or force-push) — pair-change check skipped`)
   } else {

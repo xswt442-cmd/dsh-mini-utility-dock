@@ -4,8 +4,8 @@ import { LOOPBACK_HOSTNAMES, hostHostname, isLoopbackAddress, isLoopbackName, no
 
 // These are the decisions the fragments encode, asserted here rather than only in
 // a consumer's copy of the block: what counts as loopback is the one thing every
-// host half must agree on, and both historical drifts were in this file — one
-// rejected IPv6 loopback everywhere, one disagreed on the Host spellings.
+// host half must agree on, across the Host spellings, the IPv4-mapped forms and
+// the peer address.
 
 test('the loopback allowlist is exact spellings only', () => {
   assert.deepEqual([...LOOPBACK_HOSTNAMES], ['127.0.0.1', 'localhost', '::1'])

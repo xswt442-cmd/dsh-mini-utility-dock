@@ -72,7 +72,7 @@ async function member(dir, repo) {
   return file
 }
 
-test('members that embed the same blocks pass, and the new block is compared', async () => {
+test('members that embed the same blocks pass, and the host HTTP glue block is compared', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-parity-'))
   await member(dir, 'alpha')
   await member(dir, 'beta')
@@ -84,8 +84,8 @@ test('members that embed the same blocks pass, and the new block is compared', a
   assert.match(result.stdout, /no drift/)
 })
 
-// The drift this adds coverage for: one member hand-edits the embedded glue — the
-// exact shape of "my replies lost no-store" that the block exists to prevent.
+// A hand-edited glue block is a byte difference the per-block report must name,
+// with the changed line in the output.
 test('a member whose host-HTTP block differs is named, with the diff', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'dsh-parity-'))
   await member(dir, 'alpha')
@@ -108,7 +108,7 @@ test('a member that never re-ran sync is reported as missing the block', async (
   const dir = await mkdtemp(join(tmpdir(), 'dsh-parity-'))
   await member(dir, 'alpha')
   const beta = await member(dir, 'beta')
-  // The pre-migration state: the file still carries only the two older blocks.
+  // A file that carries only the loopback and guard blocks.
   const without = await readFile(beta, 'utf8')
   await writeFile(beta, without.replace(/\/\/ <dsh-host-http>[\s\S]*?\/\/ <\/dsh-host-http>\n/, ''), 'utf8')
 

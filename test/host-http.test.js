@@ -46,8 +46,8 @@ test('sendJson states the response policy, not just the payload', () => {
   const res = fakeRes()
   sendJson(res, 200, { ok: true, port: 3080, pid: 4242 })
   assert.equal(res.status, 200)
-  // `cache-control: no-store` is the reason this helper is shared: one host half
-  // shipped its replies without it, on routes that name ports, pids and sessions.
+  // `cache-control: no-store` is the reason this helper is shared: replies that
+  // name ports, pids and sessions must not be stored by an intermediary.
   assert.equal(res.headers['cache-control'], 'no-store')
   assert.equal(res.headers['content-type'], 'application/json; charset=utf-8')
   assert.equal(res.body, '{"ok":true,"port":3080,"pid":4242}')
@@ -107,8 +107,8 @@ test('requirePost reads an absent method as GET', () => {
   assert.equal(res.sent.body.code, 'method')
 })
 
-test('requirePost policy keeps an established API vocabulary', () => {
-  // The instance-manager shape: its own `need_post` code, its own wording, and
+test('requirePost policy keeps a consumer\'s established vocabulary', () => {
+  // A consumer's established shape: its own `need_post` code, its own wording, and
   // the rejected action echoed back. None of that is a behavior difference, so
   // it is all data.
   const requirePost = createRequirePost({
