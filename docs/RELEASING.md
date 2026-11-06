@@ -1,6 +1,6 @@
 # Releasing
 
-Releases are tag-driven. Develop and verify on `dev`, merge into `main`, and let
+Releases are tag-driven. Develop and verify on `dev`, fast-forward `main`, and let
 `publish.yml` do the publishing: a `vX.Y.Z` tag triggers it, it re-runs every
 check, publishes to npm through Trusted Publishing (OIDC — no npm token exists in
 this repository), and opens the GitHub release from the changelog. There is
@@ -37,11 +37,11 @@ that embed it. Read the whole list before you push a tag.
 
    `npm pack --dry-run` is the one that catches a fragment left out of `files`: a
    published package missing a `dist/` file breaks every consumer's `sync`.
-3. Commit and push `dev`, then merge it into `main` with a merge commit:
+3. Commit and push `dev`, then fast-forward `main`:
 
    ```sh
    git switch main
-   git merge dev -m "merge: dev -> main"
+   git merge --ff-only dev
    git push origin main
    ```
 
@@ -55,11 +55,9 @@ that embed it. Read the whole list before you push a tag.
 ## The tag has to be on main
 
 The `checks` job refuses a tag that is not an ancestor of `origin/main`, and it
-refuses one whose version does not match `package.json`. That is why step 3 merges
-with a merge commit: a squash or a rebase merge replays the release commit onto
-`main` as a different object, so a tag made before or during it points at a commit
-that is no longer on any branch, and the workflow will not publish it. Do not work
-around the gate — tag the commit `main` actually has.
+refuses one whose version does not match `package.json`. Step 3 fast-forwards
+`main` to `dev`, so the tagged commit is the same object on both branches. Do not
+tag a commit that only exists on a side branch.
 
 ## What the workflow is allowed to touch
 

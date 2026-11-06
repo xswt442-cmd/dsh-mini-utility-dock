@@ -13,7 +13,7 @@ The DSH plugin family's shared assets: source fragments, an embedding CLI, and t
 
 ## Fragments
 
-| Fragment | Marker | Target file | Exports |
+| Fragment | Marker | Target file | Names provided |
 | --- | --- | --- | --- |
 | loopback predicates | `dsh-loopback-helpers` | `lib/shared.js` | `LOOPBACK_HOSTNAMES`, `normalizeHostValue`, `hostHostname`, `isLoopbackName`, `isLoopbackAddress` |
 | host request guard | `dsh-host-guard` | `lib/shared.js` | `portOf`, `GUARD_REASONS`, `DEFAULT_GUARD_POLICY` |

@@ -66,7 +66,7 @@
 // Exit code 0 = identical blocks, one shared dock pin, no private copies, and
 // every decision agrees.
 
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { join } from 'node:path'
 
@@ -77,6 +77,12 @@ const flagOf = (name) => {
 }
 
 const root = flagOf('--root') || process.env.DSH_PLUGINS_ROOT || process.cwd()
+try {
+  if (!statSync(root).isDirectory()) throw new Error('not a directory')
+} catch (error) {
+  console.error(`dsh-plugin-parity: cannot read --root ${root}: ${error.message}`)
+  process.exit(2)
+}
 
 // `--member <repo>:<export>` names one participating repository and the guard
 // factory it exports. Repeated once per participant.
@@ -168,7 +174,12 @@ const dropBlocks = (src) => {
 // whatever version is pinned here, and a version is immutable on npm, so equal
 // pins are what make the blocks equal — not the other way round.
 const dockPinOf = (repo) => {
-  const pkg = JSON.parse(readFileSync(join(root, repo, 'package.json'), 'utf8'))
+  let pkg
+  try {
+    pkg = JSON.parse(readFileSync(join(root, repo, 'package.json'), 'utf8'))
+  } catch {
+    return null
+  }
   const dev = (pkg.devDependencies || {})['dsh-mini-utility-dock']
   const any = (pkg.dependencies || {})['dsh-mini-utility-dock']
   return dev || any || null
@@ -319,6 +330,11 @@ for (const [repo, tag] of repos) {
 
 // Everything above is static, so it covers discovered members too. The decision
 // comparison needs a factory name per member, which only `--member` supplies.
+if (process.argv.includes('--fleet') && !members.length) {
+  console.error('dsh-plugin-parity: --fleet requires at least one --member')
+  process.exit(2)
+}
+
 if (!members.length) {
   console.log(failures
     ? `\n${failures} drift problem(s)`

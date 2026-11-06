@@ -13,7 +13,7 @@ DSH 插件族的共享资产：源码片段、嵌入 CLI，以及围绕它们的
 
 ## 片段
 
-| 片段 | 标记 | 目标文件 | 导出 |
+| 片段 | 标记 | 目标文件 | 提供的名称 |
 | --- | --- | --- | --- |
 | loopback 判定 | `dsh-loopback-helpers` | `lib/shared.js` | `LOOPBACK_HOSTNAMES`、`normalizeHostValue`、`hostHostname`、`isLoopbackName`、`isLoopbackAddress` |
 | host 请求守卫 | `dsh-host-guard` | `lib/shared.js` | `portOf`、`GUARD_REASONS`、`DEFAULT_GUARD_POLICY` |
