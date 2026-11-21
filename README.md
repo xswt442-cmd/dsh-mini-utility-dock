@@ -22,7 +22,7 @@ DSH 插件族的共享资产：源码片段、嵌入 CLI，以及围绕它们的
 
 ## 使用
 
-在目标文件中写入标记，然后运行 CLI。一条命令维护文件里所有已标记的块；`sync` 写入并保留标记缩进，`check` 在块内容与 `dist/` 不一致时以非零退出。
+在目标文件中写入标记，然后运行 CLI。一条命令维护文件里所有已标记的块。`sync` 写入并保留标记缩进，`check` 在块内容与 `dist/` 不一致时以非零退出。
 
 ```sh
 npx dsh-mini-utility-dock sync path/to/shared.js
@@ -32,10 +32,10 @@ npm run dock:embed -- check path/to/shared.js   # 本仓内的等价入口，目
 
 ## 约束
 
-- `dist/` 是唯一来源；改动片段后消费方重新 `sync`。
+- `dist/` 是唯一来源，改动片段后消费方要重新 `sync`。
 - `lib/shared.js` 的三个块顺序固定为 `dsh-loopback-helpers` → `dsh-host-guard` → `dsh-host-http`，即 `FRAGMENTS` 顺序。
-- `dsh-host-guard` 使用 `dsh-loopback-helpers` 在同一文件中声明的名字；`dsh-host-http` 与前两块没有依赖，可单独嵌入。
-- `sync` 自下而上替换块；标记区间彼此交叠的文件被拒绝且不写出。
+- `dsh-host-guard` 使用 `dsh-loopback-helpers` 在同一文件中声明的名字。`dsh-host-http` 与前两块没有依赖，可单独嵌入。
+- `sync` 自下而上替换块。标记区间彼此交叠的文件会被拒绝，不会写出。
 - 片段不含 `import` 或 `require`，消费插件独立发布。
 - `bindGuard` 不从片段导出，消费插件在同一文件中声明自己的 guard 导出名。
 - 各插件的错误码与文案由 `policy` 传入，判定逻辑共用，未知 key 抛错。
@@ -49,7 +49,7 @@ npm run dock:embed -- check path/to/shared.js   # 本仓内的等价入口，目
 
 ## 跨仓一致性
 
-- 消费插件的 `npm test` 把自己 `lib/shared.js` 里的块与所 pin 的 dock 版本逐字节比对；发布版本不可变、pin 是精确版本，故 pin 一致即片段一致。
+- 消费插件的 `npm test` 把自己 `lib/shared.js` 里的块与所 pin 的 dock 版本逐字节比对。发布版本不可变、pin 是精确版本，故 pin 一致即片段一致。
 - 新增片段后，消费方重跑四个 `sync` 并把 pin 一并改到发布版本，未改 pin 的一侧不比对新增的块。
 - `dsh-plugin-parity` 的跨仓比对是人工诊断，不在 CI 中运行。
   - 比对前先剥离块的公共缩进。检查四项：三个宿主块逐字节相同且按依赖顺序排列；dock pin 只有一个且是精确版本；块外没有私有的判定副本；各仓的 allow/deny 结果一致，错误码与文案可以不同。

@@ -1,0 +1,7 @@
+docs: replace the semicolons with full stops
+
+Six semicolons in 1.3k characters joined statements that read fine as
+separate sentences. The enumeration in the test item keeps its semicolons
+because those items contain commas.
+
+0 error, 0 warning.
